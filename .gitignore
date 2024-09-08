@@ -7,6 +7,10 @@
 *.obj
 *.elf
 
+#espressif
+*/components/
+*/build/
+
 # Linker output
 *.ilk
 *.map
