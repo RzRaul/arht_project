@@ -1,35 +1,39 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
 
-# _Sample project_
+# Adjacent Room Heating Transfer Project 🔥❄
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+This is a project that uses ESP32 and DHT sensors to implement a solution for making adjacent room heating transfer studies. The scope of the project is to collect data from DHTs sensors that are connected to multiple ESP32 devices, via internet, so a server can take that data and process it to generate relevant information. This is with the idea in mind of taking decisions that can help accomodate one or multiple rooms to get certain behaviour, backed up with data.
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
+In this repo the code is for the ESP32 clients that will be making the logging to the database. The Code for the server and the website will be in other repos.
 
+> Note: Add repos when created
 
+# General model 📡
 
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
-
-## Example folder contents
-
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
+For the general view, the multiple DHT sensors will be hooked up to multiple ESP32, and they will send via API calls the requests to write into the database. And a website will use the database to show visualizations, analysis, and more
 
 ```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
++---------------+      +-----------+      +------------------+      +-----------+
+|               |      |           |      |                  |      |           |
+|  DHT Sensor 1 | ---> |  ESP32 1  | ---> |   Database       | ---> |   Website |
+|               |      |           |      |  (HTTP API)      |      |           |
++---------------+      +-----------+      +------------------+      +-----------+
+                                      ^
+                                      |
++---------------+      +-----------+  |
+|               |      |           |  |
+|  DHT Sensor 2 | ---> |  ESP32 2  |--+
+|               |      |           |
++---------------+      +-----------+
+                                      ^
+                                      |
++---------------+      +-----------+  |
+|               |      |           |  |
+|  DHT Sensor 3 | ---> |  ESP32 3  |--+
+|               |      |           |
++---------------+      +-----------+
 ```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+
+# Technical details
+This codebase will be using Espressif IDF (IoT Development Framework) to achieve its porpuse. And will be programmed in C. 
+> Site: https://idf.espressif.com
+
