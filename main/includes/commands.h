@@ -20,7 +20,7 @@
 #define PORT 57006
 #define COMMAND(X) (*X == 'R' || *X == 'W')
 #define ELEMENT(X) (strcmp())
-#define ARGS 5
+#define ARGS 6
 #define COLONS ARGS-1
 #define BUFF_LEN 254
 
@@ -43,6 +43,13 @@
 #define PORT 8266
 #define PORT_UDP 8267
 
+#define DEBUG 1
+
+// #define SERVER_IP "82.180.173.228" //IoT server
+// #define SERVER_IP "201.142.138.246" //Home server
+#define SERVER_IP "192.168.1.113" //Local server
+#define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS) 
+
 
 typedef struct {
     char* valids;
@@ -58,7 +65,6 @@ typedef enum {
     INVALID
 }cmd_valid_t;
 
-cmd_valid_t checkCommands(char rx_buffer[BUFF_LEN], int len);
 void udp_server_task(void *pvParameters);
 void setup_pins();
 void dht_read_data();

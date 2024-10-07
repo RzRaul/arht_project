@@ -1,12 +1,37 @@
+//Create a description with a box of asciis 
+/* This project responds to a prototype of the client for:
+https://github.com/RzRaul/arht_project
+
+
+*/
+
 
 #include "commands.h"
 #include "my_wifi.h"
 #include "web_server.h"
+#include "esp_timer.h"
+#include "esp_sleep.h"
+#include "esp_pm.h"
+
+#define TIMER_WAKEUP_TIME_US    (2 * 1000 * 1000 * 10) // 2 seconds
 
 const char *TAG = "main";
+int connected_to_wifi = 0;
+
+TaskHandle_t orchestrator = NULL;
+
+void init_power_management(){
+    esp_pm_config_t pm_config = {
+        .max_freq_mhz = 240,
+        .min_freq_mhz = 80,
+        .light_sleep_enable = true
+    };
+}
 
 void app_main(void){
     httpd_handle_t server = NULL;
+    setupPins();
+    init_power_management();
     // init_creds_strings();
     ESP_ERROR_CHECK(esp_netif_init());
     // ESP_ERROR_CHECK(nvs_flash_erase());
@@ -39,17 +64,32 @@ void app_main(void){
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    if (check_credentials()){
-        wifi_init_sta();
-        ESP_LOGI(TAG, "Setup as WIFI client");
-    } else {
+    if (!check_credentials()){
         wifi_init_softap();
         ESP_LOGI(TAG, "Setup as AP initializing server...");
         server = start_webserver(); 
+    }else {
+        wifi_init_sta();
+        ESP_LOGI(TAG, "Setup as WIFI client");
+    } 
+    while(WIFI_CONNECTED_BIT != (xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & WIFI_CONNECTED_BIT)){
+        ESP_LOGI(TAG, "Waiting for connection to the wifi network");
     }
-    xTaskCreate(&udp_server_task, "udp_server", 4096, (void*)AF_INET, 5, NULL);
+    
+    xTaskCreate(&udp_server_task, "udp_server", 4096, (void*)AF_INET, 5, &orchestrator);
     while(1){
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(SECONDS_TO_TICKS(20));
+        /* Enter sleep mode */
+        int64_t t_before_us = esp_timer_get_time();
+        vTaskSuspend(orchestrator);
+        ESP_LOGW(TAG, "Entering sleep mode");
+        vTaskDelay(SECONDS_TO_TICKS(20));
+        /* Get timestamp after waking up from sleep */
+        int64_t t_after_us = esp_timer_get_time();
+        vTaskResume(orchestrator);
+        ESP_LOGW(TAG,"Returned from light sleep, reason: %s, t=%lld ms, slept for %lld ms\n",
+                "timer", t_after_us / 1000, (t_after_us - t_before_us) / 1000);
     }
 
 }
+

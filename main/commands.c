@@ -5,12 +5,7 @@ static const char *TAG_UDP = "UDP";
 static const char* TAG_TCP = "TCP";
 static const char* TAG_CMD = "CMD";
 esp_err_t err_check;
-#define DEBUG 1
 
-// #define SERVER_IP "82.180.173.228" //IoT server
-// #define SERVER_IP "201.142.138.246" //Home server
-#define SERVER_IP "192.168.1.113" //Local server
-#define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS) 
 
 //Control variables
 static int logged = 0;
@@ -26,39 +21,60 @@ optional_arg_t valid_args[COLONS] = {
     {.consider = 2, .valids = {"1","0"}},
 };
 
-
-cmd_valid_t checkCommands(char rx_buffer[BUFF_LEN], int len){
-    uint8_t aux = 0;
-    uint8_t args[COLONS] = {0};
-    char buffer_temp[BUFF_LEN] = {0};
-    strcpy(buffer_temp, rx_buffer);
-    for(uint8_t i=0;i<len;i++){
-        if (buffer_temp[i] == ':'){
+int process_command(char* command, int len){
+    if(!strncmp(command, ACK_RESPONSE, strlen(ACK_RESPONSE)) || !strncmp(command, NACK_RESPONSE, strlen(NACK_RESPONSE))){
+        return -1;
+    }
+    uint8_t aux = 1;
+    uint8_t args[ARGS] = {0};
+    char buffer_temp[BUFFER_SIZE] = {0};
+    strcpy(buffer_temp, command);
+    if(DEBUG){
+        ESP_LOGI("TCP", "Command: %s", buffer_temp);
+    }
+    for(uint8_t i = 0; i < len; i++){
+        if(buffer_temp[i] == ':'){
             buffer_temp[i] = '\0';
-    	    args[aux++] = i+1;
+            args[aux] = i + 1;
+            aux++;
         }
     }
-    if (aux != ARGS) return INVALID; //Invalid
-    if(strcmp(buffer_temp, "UABC")) return INVALID_HEADER;
-    if(strcmp((buffer_temp+args[0]),"R") || strcmp((buffer_temp+args[0]),"W")) return INVALID_OPERATION;
-    if(strcmp((buffer_temp+args[0]),"L") || strcmp((buffer_temp+args[0]),"A")) return INVALID_ELEMENT;
-    if(strcmp((buffer_temp+args[0]),"1") || strcmp((buffer_temp+args[0]),"0")) return INVALID_VALUE;
-
-    // if( strcmp(*buffer_temp, "UABC")) return 0;
-    // if( str)
-    //     || (strcmp(*(buffer_temp+args[0]),"R")  && strcmp(*(buffer_temp+args[1]),"R"))) {
-    //         return 0;
-    // }else{
-    //     if()
-    // }
-    return VALID_CMD;
+    if(aux < ARGS-1){
+        return -2;
+    }
+    if(strncmp(buffer_temp, HEADER, strlen(HEADER)) ||
+            strncmp(buffer_temp+args[1], USER_ID, strlen(USER_ID)) ){
+            if(DEBUG){
+                ESP_LOGW("TCP", "Invalid header or user id");
+            }
+        return -2;
+    }else{
+        if (buffer_temp[args[2]] == OP_WRITE){
+            if(buffer_temp[args[3]] == ELEMENT_ADC){
+                ESP_LOGW("TCP", "Writing to ADC (?)");
+                return -2;
+            }else{
+                if(DEBUG){
+                    ESP_LOGI("TCP", "Setting resource %c to %d", buffer_temp[args[3]], atoi(buffer_temp+args[4]));
+                }
+                return set_resource(buffer_temp[args[3]], atoi(buffer_temp+args[4]));
+            }
+        }else if(buffer_temp[args[2]] == OP_READ){
+            return get_resource(buffer_temp[args[3]]);
+        }
+    }
+    return 0;
 }
+
 void udp_server_task(void *pvParameters)
 {
-    char rx_buffer[BUFF_LEN];
+    char rx_buffer[BUFFER_SIZE] = {0};
+    char tx_buffer[BUFFER_SIZE] = {0};
     char addr_str[BUFF_LEN];
+    char host_ip[] = SERVER_IP;
     int addr_family = (int)pvParameters;
     int ip_protocol = 0;
+    int cmd_response=0;
     struct sockaddr_in6 dest_addr;
 
     while (1) {
@@ -107,13 +123,25 @@ void udp_server_task(void *pvParameters)
                 rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string...
                 ESP_LOGI(TAG_UDP, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TAG_UDP, "%s", rx_buffer);
-                checkCommands(rx_buffer, len);
+                // checkCommands(rx_buffer, len);
 
-                int err = sendto(sock, rx_buffer, len, 0, (struct sockaddr *)&source_addr, sizeof(source_addr));
-                if (err < 0) {
-                    ESP_LOGE(TAG_UDP, "Error occurred during sending: errno %d", errno);
-                    break;
-                }
+                cmd_response = process_command(rx_buffer, len);
+                if (cmd_response != -1){
+                    if (cmd_response < 0) {
+                        ESP_LOGE(TAG_UDP, "Invalid command received");
+                        strncpy(tx_buffer, NACK_RESPONSE, strlen(NACK_RESPONSE));
+                    } else{
+                        ESP_LOGI(TAG_UDP, "RECEIVED FROM %s:", addr_str);
+                        ESP_LOGI(TAG_UDP, "\'%s\'\n", rx_buffer);
+                            strncpy(tx_buffer, ACK_RESPONSE, strlen(ACK_RESPONSE));
+                            strcat(tx_buffer, ":");
+                            itoa(cmd_response, tx_buffer + strlen(ACK_RESPONSE) + 1, 10);
+                    }
+                    if(DEBUG){
+                        ESP_LOGI(TAG_UDP, "Sending response: %s\n", tx_buffer);
+                    }
+                    // send(sock, tx_buffer, strlen(tx_buffer), 0);
+                }  
             }
         }
 
@@ -148,50 +176,6 @@ void keep_alive_task(int *sock){
         ESP_LOGI("KEEP_ALIVE", "Sent keep alive command");
         vTaskDelay(SECONDS_TO_TICKS(KEEP_ALIVE_TIMEOUT));
     }
-}
-
-int process_command(char* command, int len){
-    if(!strncmp(command, ACK_RESPONSE, strlen(ACK_RESPONSE)) || !strncmp(command, NACK_RESPONSE, strlen(NACK_RESPONSE))){
-        return -1;
-    }
-    uint8_t aux = 1;
-    uint8_t args[ARGS] = {0};
-    char buffer_temp[BUFFER_SIZE] = {0};
-    strcpy(buffer_temp, command);
-    ESP_LOGI("TCP", "Command: %s", buffer_temp);
-    
-    for(uint8_t i = 0; i < len; i++){
-        if(buffer_temp[i] == ':'){
-            buffer_temp[i] = '\0';
-            args[aux] = i + 1;
-            aux++;
-        }
-    }
-    if(aux < ARGS-1){
-        return -2;
-    }
-    if(strncmp(buffer_temp, HEADER, strlen(HEADER)) ||
-            strncmp(buffer_temp+args[1], USER_ID, strlen(USER_ID)) ){
-            if(DEBUG){
-                ESP_LOGW("TCP", "Invalid header or user id");
-            }
-        return -2;
-    }else{
-        if (buffer_temp[args[2]] == OP_WRITE){
-            if(buffer_temp[args[3]] == ELEMENT_ADC){
-                ESP_LOGW("TCP", "Writing to ADC (?)");
-                return -2;
-            }else{
-                if(DEBUG){
-                    ESP_LOGI("TCP", "Setting resource %c to %d", buffer_temp[args[3]], atoi(buffer_temp+args[4]));
-                }
-                return set_resource(buffer_temp[args[3]], atoi(buffer_temp+args[4]));
-            }
-        }else if(buffer_temp[args[2]] == OP_READ){
-            return get_resource(buffer_temp[args[3]]);
-        }
-    }
-    return 0;
 }
 
 void tcp_client_task(void* pvParameters){
