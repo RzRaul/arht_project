@@ -11,8 +11,10 @@ esp_err_t err_check;
 static int logged = 0;
 static int keep_alive = 0;
 static int connected_to_wifi = 0;
-TaskHandle_t keep_alive_task_handle = NULL;
-
+int power_saving_mode = 0;
+uint8_t dht_pins[5] = {GPIO_NUM_32, GPIO_NUM_33, GPIO_NUM_23, GPIO_NUM_19, GPIO_NUM_17};
+TaskHandle_t periodic_send_handle = NULL;
+float measures[SENSORS_PER_DEVICE * 2]={0};
 
 optional_arg_t valid_args[COLONS] = {
     {.consider = 1, .valids = {"UABC"}},
@@ -153,28 +155,24 @@ void udp_server_task(void *pvParameters)
     }
     vTaskDelete(NULL);
 }
-
-void setup_pins(){
-
-    set_dth_pin(GPIO_NUM_32);
+void setup_pins_pullups(){
+    for(uint8_t i = 0; i < sizeof(dht_pins); i++){
+        gpio_set_pull_mode(dht_pins[i], GPIO_PULLUP_ONLY);
+    }
 }
-void dht_read_data(){
-    ESP_LOGD(TAG_CMD,"DHT Sensor Readings\n" );
-    int ret = readDHT();
-    
-    errorHandler(ret);
-
-    ESP_LOGD(TAG_CMD,"Humidity %.2f %%\n", getHumidity());
-    ESP_LOGD(TAG_CMD,"Temperature %.2f degC\n\n", getTemperature());
-}
-
-void keep_alive_task(int *sock){
-    //Every 10 seconds Queue to the event handler so the TCP task will send the keep alive command
-    while(1){
-        vTaskDelay(SECONDS_TO_TICKS(1));
-        send(*sock, CMD_KEEP_ALIVE, strlen(CMD_KEEP_ALIVE), 0);
-        ESP_LOGI("KEEP_ALIVE", "Sent keep alive command");
-        vTaskDelay(SECONDS_TO_TICKS(KEEP_ALIVE_TIMEOUT));
+void dht_read_data(float *measures){
+    ESP_LOGI(TAG_CMD,"DHT Sensors Readings" );
+    for(uint8_t i = 0; i < sizeof(dht_pins); i++){
+        set_dht_pin((int)dht_pins[i]);
+        for(int j = 0; j < DHT_MAX_TRIES; j++){
+            int ret = readDHT();
+            if(ret == DHT_OK){
+                break;
+            }
+        }
+        measures[i*2] = getTemperature();
+        measures[i*2+1] = getHumidity();
+        // ESP_LOGI(TAG_CMD,"Reading from pin %d - Temp:%.2f - Hum:%.2f %%", dht_pins[i], getTemperature(), getHumidity());
     }
 }
 
@@ -205,66 +203,31 @@ void tcp_client_task(void* pvParameters){
         if (err != 0) {ESP_LOGE(TAG_TCP, "Socket unable to connect: errno %d", errno); break;}
         
         ESP_LOGI(TAG_TCP, "Successfully connected");
-        xTaskCreate(keep_alive_task, "keep_alive", 4096, &sock, 5, &keep_alive_task_handle);
-        vTaskSuspend(keep_alive_task_handle);
+        // xTaskCreate(periodic_send, "keep_alive", 4096, &sock, 5, &periodic_send_handle);
 
         while (1) {
             err = 0;
             bzero(rx_buffer, sizeof(rx_buffer));
             bzero(tx_buffer, sizeof(tx_buffer));
-            if (!logged) {
-                ESP_LOGI(TAG_TCP, "Sending login command");
-                err = send(sock, CMD_LOGIN, strlen(CMD_LOGIN), 0);  
-                len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-                if(len < 0){
-                    ESP_LOGE(TAG_TCP, "recv failed: errno %d", errno);
-                    break;
-                }else{
-                    rx_buffer[len] = 0;
-                    if(!strncmp(rx_buffer, ACK_RESPONSE, strlen(ACK_RESPONSE))){
-                        ESP_LOGI(TAG_TCP, "Logged in");
-                        logged = 1;
-                    }else{
-                        ESP_LOGE(TAG_TCP, "Login failed");
-                        break;
-                    }
-                }
-                vTaskResume(keep_alive_task_handle);
+            dht_read_data(measures);
+            err = send(sock, measures, sizeof(measures), 0);
+            ESP_LOGI(TAG_TCP, "Temps: %.2f %.2f %.2f %.2f %.2f", measures[0], measures[2], measures[4], measures[6], measures[8]);
+            ESP_LOGI(TAG_TCP, "Hums: %.2f %.2f %.2f %.2f %.2f", measures[1], measures[3], measures[5], measures[7], measures[9]);
+            if (err < 0) {
+                ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
+                break;
             }
-            if (err < 0) {ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno); break;}
-
-            len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-            if (len < 0) {ESP_LOGE(TAG_TCP, "recv failed: errno %d", errno); break;
-            } else {
-                rx_buffer[len] = 0;
-                cmd_response = process_command(rx_buffer, len);
-                if (cmd_response != -1){
-                    if (cmd_response < 0) {
-                        ESP_LOGE(TAG_TCP, "Invalid command received");
-                        strncpy(tx_buffer, NACK_RESPONSE, strlen(NACK_RESPONSE));
-                    } else{
-                        ESP_LOGI(TAG_TCP, "RECEIVED FROM %s:", host_ip);
-                        ESP_LOGI(TAG_TCP, "\'%s\'\n", rx_buffer);
-                            strncpy(tx_buffer, ACK_RESPONSE, strlen(ACK_RESPONSE));
-                            strcat(tx_buffer, ":");
-                            itoa(cmd_response, tx_buffer + strlen(ACK_RESPONSE) + 1, 10);
-                    }
-                    if(DEBUG){
-                        ESP_LOGI(TAG_TCP, "Sending response: %s\n", tx_buffer);
-                    }
-                    send(sock, tx_buffer, strlen(tx_buffer), 0);  
-                } 
-            }
+            vTaskDelay(SECONDS_TO_TICKS(600));
         }
         if (sock != -1) {
             ESP_LOGE(TAG_TCP, "Shutting down socket and restarting...");
             shutdown(sock, 0);
             close(sock);
-            vTaskDelete(keep_alive_task_handle);
+            vTaskDelete(periodic_send_handle);
             vTaskDelay(SECONDS_TO_TICKS(10));
         } else if (sock == 0) {
             ESP_LOGE(TAG_TCP, "Connection closed by server");
-            vTaskSuspend(keep_alive_task_handle);
+            vTaskSuspend(periodic_send_handle);
             logged = 0;
             vTaskDelay(SECONDS_TO_TICKS(10));
         }

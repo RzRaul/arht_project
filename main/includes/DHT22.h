@@ -17,7 +17,7 @@ typedef struct {
 
 // == function prototypes =======================================
 
-void 	set_dth_pin(int gpio);
+void 	set_dht_pin(int gpio);
 void 	errorHandler(int response);
 int 	readDHT();
 float 	getHumidity();

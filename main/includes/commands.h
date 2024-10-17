@@ -17,12 +17,12 @@
 #include "DHT22.h"
 #include "resources.h"
 
-#define PORT 57006
 #define COMMAND(X) (*X == 'R' || *X == 'W')
 #define ELEMENT(X) (strcmp())
 #define ARGS 6
 #define COLONS ARGS-1
 #define BUFF_LEN 254
+#define DHT_MAX_TRIES 5
 
 #define DHT_PIN GPIO_NUM_32
 //Custom protocol symbols
@@ -47,9 +47,12 @@
 
 // #define SERVER_IP "82.180.173.228" //IoT server
 // #define SERVER_IP "201.142.138.246" //Home server
-#define SERVER_IP "192.168.1.113" //Local server
+#define SERVER_IP "192.168.1.200" //Local server
 #define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS) 
 
+#define SENSORS_PER_DEVICE 5
+
+// float measures[SENSORS_PER_DEVICE * 2];
 
 typedef struct {
     char* valids;
@@ -66,9 +69,9 @@ typedef enum {
 }cmd_valid_t;
 
 void udp_server_task(void *pvParameters);
-void setup_pins();
-void dht_read_data();
-void keep_alive_task(int *sock);
+void setup_pins_pullups();
+void dht_read_data(float *measures);
+void periodic_send(int *sock);
 int process_command(char* command, int len);
 void tcp_client_task(void* pvParameters);
 
