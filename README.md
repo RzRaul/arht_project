@@ -15,7 +15,7 @@ For the general view, the multiple DHT sensors will be hooked up to multiple ESP
 +---------------+      +-----------+      +------------------+      +-----------+
 |               |      |           |      |                  |      |           |
 |  DHT Sensor 1 | ---> |  ESP32 1  | ---> |   Database       | ---> |   Website |
-|               |      |           |      |  (HTTP API)      |      |           |
+|               |      |           |      |  (TCP  API)      |      |           |
 +---------------+      +-----------+      +------------------+      +-----------+
                                       ^
                                       |
