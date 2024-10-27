@@ -75,7 +75,7 @@ void app_main(void){
     while(WIFI_CONNECTED_BIT != (xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & WIFI_CONNECTED_BIT)){
         ESP_LOGI(TAG, "Waiting for connection to the wifi network");
     }
-    xTaskCreate(&tcp_client_task, "tcp_client", 4096, (void*)AF_INET, 5, &orchestrator);
+    xTaskCreate(&tcp_client_task, "tcp_client", 4096, (void*)deviceName, 5, &orchestrator);
 
 }
 

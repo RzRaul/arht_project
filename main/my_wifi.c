@@ -123,6 +123,7 @@ uint8_t check_credentials(){
     } else {
         size_t ssid_len = sizeof(ssid);
         size_t password_len = sizeof(password);
+        size_t deviceName_len = sizeof(deviceName);
         err = nvs_get_str(nvs_handle, "ssid", ssid, &ssid_len);
         if (err != ESP_OK) {
             ESP_LOGI(TAG_AP, "SSID not found initializing as AP");
@@ -131,6 +132,11 @@ uint8_t check_credentials(){
         err = nvs_get_str(nvs_handle, "password", password, &password_len);
         if (err != ESP_OK) {
             ESP_LOGI(TAG_AP, "Password not found, setting default");
+           return 0;
+        }
+        err = nvs_get_str(nvs_handle, "deviceName", deviceName, &deviceName_len);
+        if (err != ESP_OK) {
+            ESP_LOGI(TAG_AP, "Device name not found, setting default");
            return 0;
         }
         nvs_close(nvs_handle);

@@ -12,7 +12,7 @@ PORT = 8266        # Port to listen on (non-privileged ports are > 1023)
 DATABASE = "arht_test"
 TABLE = "study_1"
 USER = "logger"
-PREPARED_STATEMENT = "INSERT INTO study_1 VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?)"
+PREPARED_STATEMENT = "INSERT INTO study_1 VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?,?)"
 
 # Function to handle client connections
 
@@ -55,8 +55,13 @@ def handle_client(conn, addr):
             data = conn.recv(1024)
             if not data:
                 break
-            # Receives 10 floats 4 bytes each. Turns them into a list of floats
-            data = struct.unpack('10f', data)
+            print(f"Received {len(data)} bytes")
+            # Receives 10 floats 4 bytes each. Turns them into a list of floats and also max 32 bytes for name
+            # and assigns it to device name
+            data = struct.unpack('10f32s', data)
+            data = list(data)
+            data[-1] = data[-1].decode('utf-8').strip('\x00')
+            data = tuple(data)
             print(data)
             #inserts data into the database
             insert_data(data)

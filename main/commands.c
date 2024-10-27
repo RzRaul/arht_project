@@ -1,5 +1,6 @@
 
 #include "commands.h"
+#include "my_wifi.h"
 
 static const char *TAG_UDP = "UDP";
 static const char* TAG_TCP = "TCP";
@@ -165,7 +166,7 @@ void dht_read_data(float *measures){
     for(uint8_t i = 0; i < sizeof(dht_pins); i++){
         set_dht_pin((int)dht_pins[i]);
         for(int j = 0; j < DHT_MAX_TRIES; j++){
-            int ret = readDHT();
+                int ret = readDHT();
             if(ret == DHT_OK){
                 break;
             }
@@ -210,14 +211,17 @@ void tcp_client_task(void* pvParameters){
             bzero(rx_buffer, sizeof(rx_buffer));
             bzero(tx_buffer, sizeof(tx_buffer));
             dht_read_data(measures);
-            err = send(sock, measures, sizeof(measures), 0);
+            memcpy(tx_buffer, measures, sizeof(measures));
+            strncpy(tx_buffer + sizeof(measures), deviceName, sizeof(deviceName));
+            err = send(sock, tx_buffer, sizeof(measures)+sizeof(deviceName), 0);
+            ESP_LOGI(TAG_TCP, "Name of the device: %s", deviceName);
             ESP_LOGI(TAG_TCP, "Temps: %.2f %.2f %.2f %.2f %.2f", measures[0], measures[2], measures[4], measures[6], measures[8]);
             ESP_LOGI(TAG_TCP, "Hums: %.2f %.2f %.2f %.2f %.2f", measures[1], measures[3], measures[5], measures[7], measures[9]);
             if (err < 0) {
                 ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
                 break;
             }
-            vTaskDelay(SECONDS_TO_TICKS(600));
+            vTaskDelay(SECONDS_TO_TICKS(1200));
         }
         if (sock != -1) {
             ESP_LOGE(TAG_TCP, "Shutting down socket and restarting...");

@@ -27,6 +27,12 @@ void set_dht_pin( int gpio )
 	dht_data.pin = gpio;
 }
 
+void clean_dht_data()
+{
+	dht_data.temp = 0.;
+	dht_data.humidity = 0.;
+}
+
 // == get temp & hum =============================================
 
 float getHumidity() { return dht_data.humidity; }
@@ -111,12 +117,12 @@ To request data from DHT:
 
 int readDHT()
 {
-int uSec = 0;
+	int uSec = 0;
 
-uint8_t dhtData[MAXdhtData];
-uint8_t byteInx = 0;
-uint8_t bitInx = 7;
-
+	uint8_t dhtData[MAXdhtData];
+	uint8_t byteInx = 0;
+	uint8_t bitInx = 7;
+	clean_dht_data();
 	for (int k = 0; k<MAXdhtData; k++) 
 		dhtData[k] = 0;
 
