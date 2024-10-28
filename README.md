@@ -47,6 +47,12 @@ The connection is made with RJ11 (4 wires) and its respective connector
 And these are the connectors </br>
 ![image](https://github.com/user-attachments/assets/f5b3d895-4a3d-44a1-939a-f83288e0adcf)
 
+# Database model
+![image](https://github.com/user-attachments/assets/4dd80d9e-00d7-4659-8a65-0f7944ae78d6)
+
+# Website stack
+For the website [Flask](https://flask.palletsprojects.com/en/stable/) will be used in order to take advantage of [Pandas](https://pandas.pydata.org/docs/) library 
+Everything is running in the [Orange Pi Zero 2 W](http://www.orangepi.org/html/hardWare/computerAndMicrocontrollers/details/Orange-Pi-Zero-2W.html)
 
 # Technical details 
 This codebase will be using Espressif IDF (IoT Development Framework) to achieve its porpuse. And will be programmed in C. 
