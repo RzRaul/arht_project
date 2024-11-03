@@ -12,7 +12,7 @@ https://github.com/RzRaul/arht_project
 #include "esp_timer.h"
 #include "esp_sleep.h"
 #include "esp_pm.h"
-#define TIMER_WAKEUP_TIME_US    (2 * 1000 * 1000 * 10) // 2 seconds
+#define TIMER_WAKEUP_TIME_US    (2 * 1000 * 1000 * 10) // 2 secondss
 
 const char *TAG = "main";
 int connected_to_wifi = 0;	

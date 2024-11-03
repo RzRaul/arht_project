@@ -63,6 +63,8 @@ esp_err_t config_get_handler(httpd_req_t *req)
                 ESP_LOGI(TAG_WEBS, "Found URL query parameter => fname=%s", deviceName);
             }
             if(strlen(ssid) > 0 && strlen(password) > 0 && strlen(deviceName) > 0){
+                replace_char(ssid, '+', ' ');
+                replace_char(deviceName, '+', ' ');
                 set_nvs_creds_and_name(ssid, password, deviceName);
                 ESP_LOGI(TAG_WEBS, "Credentials set, restarting...");
                 free(buf);

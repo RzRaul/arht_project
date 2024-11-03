@@ -86,6 +86,15 @@ esp_netif_t *wifi_init_sta(void){
     return esp_netif_sta;
 }
 
+uint8_t replace_char(char* str, char find, char replace){
+    char *current_pos = strchr(str, find);
+    if (current_pos) {
+        *current_pos = replace;
+        return 1;
+    }
+    return 0;
+}
+
 esp_err_t set_nvs_creds_and_name(char* new_ssid, char* new_pass, char* deviceName){
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
@@ -104,6 +113,7 @@ esp_err_t set_nvs_creds_and_name(char* new_ssid, char* new_pass, char* deviceNam
             return err;
         }
         err = nvs_set_str(nvs_handle, "deviceName", deviceName);
+    
         if (err != ESP_OK) {
             ESP_LOGE(TAG_AP, "Error (%s) setting password in NVS", esp_err_to_name(err));
             return err;

@@ -8,7 +8,6 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "esp_mac.h"
-#include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif_net_stack.h"
@@ -40,6 +39,7 @@ extern int s_retry_num;
 
 esp_netif_t * wifi_init_sta(void);
 esp_netif_t * wifi_init_softap(void);
+uint8_t replace_char(char* str, char find, char replace);
 uint8_t check_credentials();
 void wifi_event_handler(void *arg, esp_event_base_t event_base,int32_t event_id, void *event_data);
 esp_err_t set_nvs_creds_and_name(char* new_ssid, char* new_pass, char* deviceName);
