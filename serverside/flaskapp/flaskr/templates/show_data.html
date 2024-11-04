@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="viewport" content="width=device-width">
+    <link  rel="stylesheet" type="text/css" href="static/styles.css">
+</head>
+<title>
+    AHRT Project
+</title>
+<body>
+    <div id="navBar">
+        <ul>
+            <li><a class="active" href="#home">Home</a></li>
+            <li><a href="#news">News</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#about">About</a></li>
+          </ul>
+    </div>
+    <div name="timeGraph" id="temp_chart" class="chart">
+        
+    </div>
+    <div name="separator" class="separator">
+
+    </div>
+    <div name="timeGraph" id="humidity_chart" class="chart2">
+        
+    </div>
+</body>
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type='text/javascript'>
+  var temp_graph = {{temp_graphJSON | safe}};
+  Plotly.plot('temp_chart',temp_graph,{});
+
+  var hum_graph = {{humidity_graphJSON | safe}};
+  Plotly.plot('humidity_chart',hum_graph,{});
+</script>
+
+</html>
