@@ -58,5 +58,16 @@ Everything is running in the [Orange Pi Zero 2 W](http://www.orangepi.org/html/h
 This codebase will be using Espressif IDF (IoT Development Framework) to achieve its porpuse. And will be programmed in C. 
 > Site: https://idf.espressif.com
 
+# Progress
+
+![image](https://github.com/user-attachments/assets/149fd469-4099-4532-9e72-374b8af31535)
+
+What it will look like </br>
+![image](https://github.com/user-attachments/assets/3c80a949-79f1-4bb9-9145-5525c41f1597)
+</br>
+![image](https://github.com/user-attachments/assets/c218b509-729a-4250-8523-7bb7195d3a52)
+
+
+
 
 
