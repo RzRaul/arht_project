@@ -17,13 +17,16 @@
             <li><a href="#about">About</a></li>
           </ul>
     </div>
-    <div name="timeGraph" id="temp_chart" class="chart">
+    <div name="tempGraph" id="temp_chart" class="chart">
         
     </div>
     <div name="separator" class="separator">
 
     </div>
-    <div name="timeGraph" id="humidity_chart" class="chart2">
+    <div name="humidityGraph" id="humidity_chart" class="chart">
+        
+    </div>
+    <div name="heatGraph" id="heatmap_chart" class="chart">
         
     </div>
 </body>
@@ -34,6 +37,9 @@
 
   var hum_graph = {{humidity_graphJSON | safe}};
   Plotly.plot('humidity_chart',hum_graph,{});
+
+  var heatmap_graph = {{heatmap_graphJSON | safe}};
+  Plotly.plot('heatmap_chart',heatmap_graph,{});
 </script>
 
 </html>
