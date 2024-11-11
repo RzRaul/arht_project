@@ -1,4 +1,5 @@
 #include "resources.h"
+#include "commands.h"
 
 int read_adc_(){
     int raw;
@@ -41,6 +42,16 @@ void adc_init(){
     };
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_unit_handler, ADC_CHANNEL, &adc_channel));
 }
+void setup_inputPins(){
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
+    io_conf.pin_bit_mask = 1ULL << GPIO_NUM_17 | 1ULL << GPIO_NUM_19 |1ULL << GPIO_NUM_23 |1ULL << GPIO_NUM_32 |1ULL << GPIO_NUM_33 ;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 1;
+    gpio_config(&io_conf);
+}
+
 
 void setupPins(){
     gpio_config_t io_conf;

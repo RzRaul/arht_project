@@ -9,10 +9,10 @@ import mariadb
 # Constants
 HOST = '192.168.1.200'  # Localhost
 PORT = 8266        # Port to listen on (non-privileged ports are > 1023)
-DATABASE = "arht_test"
-TABLE = "study_1"
+DATABASE = "arht_prod"
+TABLE = "measurements"
 USER = "logger"
-PREPARED_STATEMENT = "INSERT INTO study_1 VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?,?)"
+PREPARED_STATEMENT = f"INSERT INTO {TABLE} (sens_time, temp_pin17, humidity_pin17, temp_pin19, humidity_pin19, temp_pin23, humidity_pin23, temp_pin32, humidity_pin32, temp_pin33, humidity_pin33, room_name, id_study) VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?,?,?)"
 
 # Function to handle client connections
 
@@ -33,6 +33,7 @@ def insert_data(data):
     #Creates a cursor to interact with the database
     cur = conn.cursor()
     #Inserts data into the database
+    print(f"STMT -> {PREPARED_STATEMENT}\n")
     cur.execute(PREPARED_STATEMENT, data)
     #Commits the data
     conn.commit()
@@ -58,9 +59,10 @@ def handle_client(conn, addr):
             print(f"Received {len(data)} bytes")
             # Receives 10 floats 4 bytes each. Turns them into a list of floats and also max 32 bytes for name
             # and assigns it to device name
-            data = struct.unpack('10f32s', data)
+            data = struct.unpack('10f32s32s', data)
             data = list(data)
             data[-1] = data[-1].decode('utf-8').strip('\x00')
+            data[-2] = data[-2].decode('utf-8').strip('\x00')
             data = tuple(data)
             print(data)
             #inserts data into the database

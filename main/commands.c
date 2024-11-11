@@ -13,16 +13,10 @@ static int logged = 0;
 static int keep_alive = 0;
 static int connected_to_wifi = 0;
 int power_saving_mode = 0;
-uint8_t dht_pins[5] = {GPIO_NUM_32, GPIO_NUM_33, GPIO_NUM_23, GPIO_NUM_19, GPIO_NUM_17};
+uint8_t dht_pins[SENSORS_PER_DEVICE] = {GPIO_NUM_17, GPIO_NUM_19, GPIO_NUM_23, GPIO_NUM_32, GPIO_NUM_33};
 TaskHandle_t periodic_send_handle = NULL;
-float measures[SENSORS_PER_DEVICE * 2]={0};
-
-optional_arg_t valid_args[COLONS] = {
-    {.consider = 1, .valids = {"UABC"}},
-    {.consider = 2, .valids = {"R","W"}},
-    {.consider = 2, .valids = {"L","G"}},
-    {.consider = 2, .valids = {"1","0"}},
-};
+float measures[SENSORS_PER_DEVICE * PARAMETERS_PER_SENSOR]={0};
+uint8_t failure_counts[SENSORS_PER_DEVICE] = {0};
 
 int process_command(char* command, int len){
     if(!strncmp(command, ACK_RESPONSE, strlen(ACK_RESPONSE)) || !strncmp(command, NACK_RESPONSE, strlen(NACK_RESPONSE))){
@@ -68,7 +62,13 @@ int process_command(char* command, int len){
     }
     return 0;
 }
-
+void print_sensors_pins(){
+    uint8_t pins_vals[SENSORS_PER_DEVICE] = {0};
+    for (uint8_t i = 0; i < SENSORS_PER_DEVICE; i++){
+        pins_vals[i] = gpio_get_level(dht_pins[i]);
+        ESP_LOGI("cmd", "Pin %d -> %d", dht_pins[i], pins_vals[i]);
+    }   
+}
 void udp_server_task(void *pvParameters)
 {
     char rx_buffer[BUFFER_SIZE] = {0};
@@ -173,6 +173,16 @@ void dht_read_data(float *measures){
         }
         measures[i*2] = getTemperature();
         measures[i*2+1] = getHumidity();
+        //Check for 0,0 and adds to accumulator, if repeated erro
+        if(getTemperature() == 0 && getHumidity() ==0 ){
+            //Logs that the senor failed after DHT_MAX_TRIES 
+            failure_counts[i]++;
+        }else{
+            //If it is not consecutives failures reset failure counts
+            failure_counts[i]=0;
+        }
+
+
         // ESP_LOGI(TAG_CMD,"Reading from pin %d - Temp:%.2f - Hum:%.2f %%", dht_pins[i], getTemperature(), getHumidity());
     }
 }
@@ -213,15 +223,22 @@ void tcp_client_task(void* pvParameters){
             dht_read_data(measures);
             memcpy(tx_buffer, measures, sizeof(measures));
             strncpy(tx_buffer + sizeof(measures), deviceName, sizeof(deviceName));
-            err = send(sock, tx_buffer, sizeof(measures)+sizeof(deviceName), 0);
-            ESP_LOGI(TAG_TCP, "Name of the device: %s", deviceName);
+            strncpy(tx_buffer+ sizeof(measures)+sizeof(deviceName),study_key, sizeof(study_key));
+            err = send(sock, tx_buffer, sizeof(measures) + sizeof(deviceName) + sizeof(study_key), 0);
+            ESP_LOGI(TAG_TCP, "Name of the device: %s for the study %s", deviceName,study_key);
             ESP_LOGI(TAG_TCP, "Temps: %.2f %.2f %.2f %.2f %.2f", measures[0], measures[2], measures[4], measures[6], measures[8]);
             ESP_LOGI(TAG_TCP, "Hums: %.2f %.2f %.2f %.2f %.2f", measures[1], measures[3], measures[5], measures[7], measures[9]);
             if (err < 0) {
                 ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
                 break;
             }
-            vTaskDelay(SECONDS_TO_TICKS(1200));
+            for(int i=0;i<SENSORS_PER_DEVICE;i++){
+                if(failure_counts[i] >= 3){
+                    ESP_LOGE(TAG_TCP, "Error on pin %d", dht_pins[i]);
+                    memset(failure_counts, 0, sizeof(failure_counts));
+                }
+            }
+            vTaskDelay(MEASURES_SAMPLING_TIME);
         }
         if (sock != -1) {
             ESP_LOGE(TAG_TCP, "Shutting down socket and restarting...");

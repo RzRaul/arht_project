@@ -6,6 +6,7 @@ int s_retry_num = 5;
 char ssid[WiFi_MAX_CHARS] = {0};
 char password[WiFi_MAX_CHARS] = {0};
 char deviceName[WiFi_MAX_CHARS] = {0};
+char study_key[WiFi_MAX_CHARS] = {0};
 EventGroupHandle_t s_wifi_event_group = NULL;
 
 void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data){
@@ -80,6 +81,8 @@ esp_netif_t *wifi_init_sta(void){
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_sta_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+    esp_netif_ip_info_t ip_info;
+    esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"), &ip_info);
 
     ESP_LOGI(TAG_STA, "wifi_init_sta finished.");
 
@@ -118,6 +121,12 @@ esp_err_t set_nvs_creds_and_name(char* new_ssid, char* new_pass, char* deviceNam
             ESP_LOGE(TAG_AP, "Error (%s) setting password in NVS", esp_err_to_name(err));
             return err;
         }
+        err = nvs_set_str(nvs_handle, "studyKey", study_key);
+    
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG_AP, "Error (%s) setting password in NVS", esp_err_to_name(err));
+            return err;
+        }
         nvs_close(nvs_handle);
     }
     return ESP_OK;
@@ -134,6 +143,7 @@ uint8_t check_credentials(){
         size_t ssid_len = sizeof(ssid);
         size_t password_len = sizeof(password);
         size_t deviceName_len = sizeof(deviceName);
+        size_t study_key_len = sizeof(study_key);
         err = nvs_get_str(nvs_handle, "ssid", ssid, &ssid_len);
         if (err != ESP_OK) {
             ESP_LOGI(TAG_AP, "SSID not found initializing as AP");
@@ -149,6 +159,11 @@ uint8_t check_credentials(){
             ESP_LOGI(TAG_AP, "Device name not found, setting default");
            return 0;
         }
+        err = nvs_get_str(nvs_handle, "studyKey", study_key, &study_key_len);
+        if (err != ESP_OK) {
+            ESP_LOGI(TAG_AP, "Study info not found, setting default");
+           return 0;
+        }
         nvs_close(nvs_handle);
         return 1;
     }
@@ -158,4 +173,5 @@ void init_creds_strings(){
     memset(ssid, 0, sizeof(ssid));
     memset(password, 0, sizeof(password));
     memset(deviceName, 0, sizeof(deviceName));
+    memset(study_key, 0, sizeof(study_key));
 }

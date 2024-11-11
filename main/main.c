@@ -32,6 +32,8 @@ void app_main(void){
     httpd_handle_t server = NULL;
     setup_pins_pullups();
     init_power_management();
+    // setup_inputPins();
+    // print_sensors_pins();
     // init_creds_strings();
     ESP_ERROR_CHECK(esp_netif_init());
     // ESP_ERROR_CHECK(nvs_flash_erase());
@@ -68,6 +70,7 @@ void app_main(void){
         wifi_init_softap();
         ESP_LOGI(TAG, "Setup as AP initializing server...");
         server = start_webserver(); 
+        // start_captative_portal(); //WIP
     }else {
         wifi_init_sta();
         ESP_LOGI(TAG, "Setup as WIFI client");

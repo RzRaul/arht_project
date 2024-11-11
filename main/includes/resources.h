@@ -14,6 +14,7 @@
 static adc_oneshot_unit_handle_t adc_unit_handler;
 
 int read_adc_();
+void setup_inputPins();
 int get_resource(char resource);
 int set_resource(char resource, int value);
 void adc_init();

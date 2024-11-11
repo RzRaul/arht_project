@@ -51,6 +51,8 @@
 #define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS) 
 
 #define SENSORS_PER_DEVICE 5
+#define PARAMETERS_PER_SENSOR 2
+#define MEASURES_SAMPLING_TIME SECONDS_TO_TICKS(1200)
 
 // float measures[SENSORS_PER_DEVICE * 2];
 
@@ -69,6 +71,7 @@ typedef enum {
 }cmd_valid_t;
 
 void udp_server_task(void *pvParameters);
+void print_sensors_pins();
 void setup_pins_pullups();
 void dht_read_data(float *measures);
 void periodic_send(int *sock);

@@ -29,17 +29,20 @@
     <div name="heatGraph" id="heatmap_chart" class="chart">
         
     </div>
+    
 </body>
 <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 <script type='text/javascript'>
-  var temp_graph = {{temp_graphJSON | safe}};
-  Plotly.plot('temp_chart',temp_graph,{});
+    var temp_graph = {{temp_graphJSON | safe}};
+    Plotly.plot('temp_chart',temp_graph,{});
 
-  var hum_graph = {{humidity_graphJSON | safe}};
-  Plotly.plot('humidity_chart',hum_graph,{});
+    var hum_graph = {{humidity_graphJSON | safe}};
+    Plotly.plot('humidity_chart',hum_graph,{});
 
-  var heatmap_graph = {{heatmap_graphJSON | safe}};
-  Plotly.plot('heatmap_chart',heatmap_graph,{});
+    var heatmap_data = {{heat_graphJSON |toJson| safe}};
+    Plotly.plot('heatmap_chart',heatmap_graph.data,heatmap_data.layout);
+
 </script>
 
 </html>
+

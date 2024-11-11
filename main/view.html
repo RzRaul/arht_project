@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Please fill the information</title>
+</head>
 <body>
 
 <h2>Configure the wifi</h2>
@@ -8,9 +11,11 @@
   <label for="fssid">WiFi name</label><br>
   <input type="text" id="fssid" name="fssid" placeholder="SSID"><br><br>
   <label for="fpass">WiFi Password </label><br>
-  <input type="text" id="fpass" name="fpass" placeholder="Password"><br><br><br>
+  <input type="password" id="fpass" name="fpass" placeholder="Password"><br><br><br>
   <label for="fpass">Name this device</label><br>
   <input type="text" id="fname" name="fname" placeholder="Ex: Living room"><br><br>
+  <label for="fpass">Study code</label><br>
+  <input type="text" id="fstudy" name="fstudy" placeholder="Ex: 1002"><br><br>
   <input type="submit" value="Finish">
 </form> 
 
@@ -33,7 +38,7 @@ label {
 }
 
 /* Full-width inputs */
-input[type=text], input[type=submit] {
+input[type=text], input[type=password], input[type=submit] {
   width: 100%;
   padding: 12px 20px;
   margin: 8px 0;

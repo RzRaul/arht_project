@@ -29,12 +29,14 @@
 #define AP_DEFAULT_PASS "12345678"
 #define DEFAULT_WIFI_RETRY 5
 #define WiFi_MAX_CHARS 32
+#define ESP32_AP_IP_ADDR "192.168.4.1"
 
 
 extern EventGroupHandle_t s_wifi_event_group;
 extern char ssid[WiFi_MAX_CHARS];
 extern char password[WiFi_MAX_CHARS];
 extern char deviceName[WiFi_MAX_CHARS];
+extern char study_key[WiFi_MAX_CHARS];
 extern int s_retry_num;
 
 esp_netif_t * wifi_init_sta(void);
