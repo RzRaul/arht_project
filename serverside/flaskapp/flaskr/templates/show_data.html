@@ -26,9 +26,14 @@
     <div name="humidityGraph" id="humidity_chart" class="chart">
         
     </div>
-    <div name="heatGraph" id="heatmap_chart" class="chart">
-        
-    </div>
+    <h1>Temperature Heatmap - Time of Day</h1>
+     <div name="heatmapGraph" id="heatmap_chart" class="chart"></div>
+
+     <div class="slider-container">
+         <label for="time-slider" class="slider-label">Time of Day: <span id="time-label">0</span> hrs</label><br>
+         <input type="range" id="time-slider" min="0" max="23" value="0" step="1">
+     </div>
+    
     
 </body>
 <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
@@ -39,8 +44,30 @@
     var hum_graph = {{humidity_graphJSON | safe}};
     Plotly.plot('humidity_chart',hum_graph,{});
 
-    var heatmap_data = {{heat_graphJSON |toJson| safe}};
-    Plotly.plot('heatmap_chart',heatmap_graph.data,heatmap_data.layout);
+    var heatmap_data = {{heat_graphJSON | safe}};
+    var slider = document.getElementById("time-slider");
+    var timeDisplay = document.getElementById("time-label");
+
+    // Function to update the heatmap for a given snapshot
+    function updateHeatmap(snapshot) {
+        var tempGraphJSON = snapshot.graph;
+        var heatmapData = JSON.parse(tempGraphJSON);
+        heatmapData.layout.yaxis.autorange = 'reversed';
+        console.log("Updated map")
+        // Plot the heatmap using Plotly
+        Plotly.newPlot('heatmap_chart', heatmapData.data, heatmapData.layout);
+    }
+
+    // Initialize the first heatmap and display time
+    updateHeatmap(heatmap_data[0]);
+    timeDisplay.textContent = heatmap_data[0].time;
+
+    // Event listener for the slider to update the heatmap when the time changes
+    slider.addEventListener("input", function() {
+        var index = slider.value;
+        timeDisplay.textContent = heatmap_data[index].time;
+        updateHeatmap(heatmap_data[index]);
+    });
 
 </script>
 

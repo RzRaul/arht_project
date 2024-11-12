@@ -174,26 +174,26 @@ for index, snap in df_test.iterrows():
 
 # -->
 
-# // var temperaturesData = {{ temperatures_data | safe }};
-#     // var slider = document.getElementById("time-slider");
-#     // var timeDisplay = document.getElementById("time-display");
+// var temperaturesData = {{ temperatures_data | safe }};
+    // var slider = document.getElementById("time-slider");
+    // var timeDisplay = document.getElementById("time-display");
 
-#     // // Function to update the heatmap for a given snapshot
-#     // function updateHeatmap(snapshot) {
-#     //     var tempGraphJSON = snapshot.graph;
-#     //     var heatmapData = JSON.parse(tempGraphJSON);
+    // // Function to update the heatmap for a given snapshot
+    // function updateHeatmap(snapshot) {
+    //     var tempGraphJSON = snapshot.graph;
+    //     var heatmapData = JSON.parse(tempGraphJSON);
         
-#     //     // Plot the heatmap using Plotly
-#     //     Plotly.newPlot('heatmap', heatmapData.data, heatmapData.layout);
-#     // }
+    //     // Plot the heatmap using Plotly
+    //     Plotly.newPlot('heatmap', heatmapData.data, heatmapData.layout);
+    // }
 
-#     // // Initialize the first heatmap and display time
-#     // updateHeatmap(temperaturesData[0]);
-#     // timeDisplay.textContent = temperaturesData[0].time;
+    // // Initialize the first heatmap and display time
+    // updateHeatmap(temperaturesData[0]);
+    // timeDisplay.textContent = temperaturesData[0].time;
 
-#     // // Event listener for the slider to update the heatmap when the time changes
-#     // slider.addEventListener("input", function() {
-#     //     var index = slider.value;
-#     //     timeDisplay.textContent = temperaturesData[index].time;
-#     //     updateHeatmap(temperaturesData[index]);
-#     // });
+    // // Event listener for the slider to update the heatmap when the time changes
+    // slider.addEventListener("input", function() {
+    //     var index = slider.value;
+    //     timeDisplay.textContent = temperaturesData[index].time;
+    //     updateHeatmap(temperaturesData[index]);
+    // });

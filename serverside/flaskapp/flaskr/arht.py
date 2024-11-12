@@ -29,45 +29,17 @@ def generate_heatmap_figure(M, points, temperatures):
     figure = go.Figure(data=go.Heatmap(
         z=temperature_grid,
         colorscale='Turbo',
-        colorbar=dict(title='Temperature (°C)', tickvals=[5, 30], ticktext=['5°C', '30°C']),
+        colorbar=dict(title='Temperature (°C)', tickvals=[8, 30], ticktext=['8°C', '30°C']),
     ))
 
     figure.update_layout(
         title='Temperature Distribution',
         xaxis_title='X Coordinate',
         yaxis_title='Y Coordinate',
-        coloraxis=dict(cmin=5, cmax=30)
+        coloraxis=dict(cmin=8, cmax=30)
     )
 
     return figure
-
-def create_heatmap_data(M, points, temperatures):
-    # Create an empty MxM grid
-    grid_x, grid_y = np.meshgrid(np.arange(M), np.arange(M))
-    grid_x = grid_x.flatten()
-    grid_y = grid_y.flatten()
-
-    # Known points and their temperatures
-    known_points = np.array(points)
-    known_temperatures = np.array(temperatures)
-
-    # Perform interpolation (using 'cubic' for smooth gradients)
-    grid_temperatures = griddata(known_points, known_temperatures, (grid_x, grid_y), method='cubic')
-
-    # Reshape the output into the grid shape
-    temperature_grid = grid_temperatures.reshape(M, M)
-
-    # Prepare the data to be serialized into JSON
-    data = {
-        'M': M,
-        'temperature_grid': temperature_grid.tolist(),  # Convert the numpy array to a list
-        'points': points,
-        'temperatures': temperatures
-    }
-
-    # Convert to JSON
-    json_data = json.dumps(data)
-    return json_data
 
 with app.app_context():
     global temp_graphJSON, humidity_graphJSON, heatmap_data, df
@@ -114,23 +86,20 @@ with app.app_context():
     df2.reset_index(inplace=True, drop=True)
     # Assuming `df_test` contains the subset you want to display
     df_merged = pd.concat([df1, df2], axis=1, join='outer')
-    df_test = df_merged.iloc[10]
-    temperatures = list(df_test.iloc[1:])
-    figure = generate_heatmap_figure(M, points, temperatures)  # M = 21 for grid size
-    figure_json = plotly.io.to_json(figure, pretty=True)
-    
+    df_merged.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+    df_test = df_merged.iloc[::2,:]
     # # Create heatmap figures for each snapshot and serialize them to JSON
-    # temperatures_data = []
-    # for index, snap in df_test.iterrows():
-    #     temperatures = list(snap.iloc[1:])
-    #     figure = generate_heatmap_figure(M, points, temperatures)  # M = 21 for grid size
-    #     figure_json = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
-    #     temperatures_data.append({
-    #         'time': snap['time'],  # Include timestamp
-    #         'graph': figure_json
-    #     })
+    temperatures_data = []
+    for index, snap in df_test.iterrows():
+        temperatures = list(snap.iloc[1:])
+        figure = generate_heatmap_figure(M, points, temperatures)  # M = 21 for grid size
+        figure_json = json.dumps(figure, cls=plotly.utils.PlotlyJSONEncoder)
+        temperatures_data.append({
+            'time': snap['time'],  # Include timestamp
+            'graph': figure_json
+        })
 
-    heatmap_data = figure_json
+    heatmap_data = temperatures_data
 
 
 @app.route("/")
@@ -177,42 +146,42 @@ def get_data_cached():
 @app.route("/heatmap")
 def heatmap_site():
     
-    return render_template("show_data.html", heat_graphJSON=heatmap_data)
+    return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
 
-@app.route('/heatmap_data')
-def heatmap_data():
-    M = 21  # Example for a 10x10 grid
-    points = [(20,5),(20,15),(13,10),(20,10),(10,0),(0,5),(4,2),(6,10),(4,20),(1,13)]
-    cols1 = ['time','20,5','20,15','13,10','20,10','10,0']
-    cols2 = ['0,5','4,2','6,10','4,20','1,13']
-    df = pd.read_csv("study_1001.csv")
-    df['sens_time'] = pd.to_datetime(df['sens_time'])
-    df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
-    df = df.replace(0, np.nan)
-    df1 = df[df['room_name']=="Bedroom"]
-    df2 = df[df['room_name']!="Bedroom"]
-    df1 = df1.drop(columns=['id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
-    df2 = df2.drop(columns=['sens_time','id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
-    # df = df.iloc[::15,:]
-    df1.columns = cols1
-    df2.columns = cols2
-    df1.reset_index(inplace=True, drop=True)
-    df2.reset_index(inplace=True, drop=True)
-    # Assuming `df_test` contains the subset you want to display
-    df_merged = pd.concat([df1, df2], axis=1, join='outer')
-    df_test = df_merged.iloc[::2,:]
+# @app.route('/heatmap_data')
+# def heatmap_data_func():
+#     M = 21  # Example for a 10x10 grid
+#     points = [(20,5),(20,15),(13,10),(20,10),(10,0),(0,5),(4,2),(6,10),(4,20),(1,13)]
+#     cols1 = ['time','20,5','20,15','13,10','20,10','10,0']
+#     cols2 = ['0,5','4,2','6,10','4,20','1,13']
+#     # df = pd.read_csv("study_1001.csv")
+#     df['sens_time'] = pd.to_datetime(df['sens_time'])
+#     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+#     df = df.replace(0, np.nan)
+#     df1 = df[df['room_name']=="Bedroom"]
+#     df2 = df[df['room_name']!="Bedroom"]
+#     df1 = df1.drop(columns=['id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
+#     df2 = df2.drop(columns=['sens_time','id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
+#     # df = df.iloc[::15,:]
+#     df1.columns = cols1
+#     df2.columns = cols2
+#     df1.reset_index(inplace=True, drop=True)
+#     df2.reset_index(inplace=True, drop=True)
+#     # Assuming `df_test` contains the subset you want to display
+#     df_merged = pd.concat([df1, df2], axis=1, join='outer')
+#     df_test = df_merged.iloc[::2,:]
     
-    # For each time snapshot, get the temperature data
-    temperatures_data = []
-    for index, snap in df_test.iterrows():
-        temperatures = list(snap.iloc[1:])
-        heatmap = generate_heatmap_figure(M, points, temperatures)  # M = 21 for grid size
-        temperatures_data.append({
-            'time': snap['time'],  # Include timestamp
-            'data': heatmap
-        })
+#     # For each time snapshot, get the temperature data
+#     temperatures_data = []
+#     for index, snap in df_test.iterrows():
+#         temperatures = list(snap.iloc[1:])
+#         heatmap = generate_heatmap_figure(M, points, temperatures)  # M = 21 for grid size
+#         temperatures_data.append({
+#             'time': snap['time'],  # Include timestamp
+#             'data': heatmap
+#         })
     
-    return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=temperatures_data)
+#     return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=temperatures_data)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
