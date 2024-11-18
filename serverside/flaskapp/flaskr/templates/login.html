@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="static/login.css">
+    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+    <title>Login</title>
+</head>
+<body>
+    <div class="login-container">
+        <div class="form-wrapper">
+            <h1>Enter Study Code</h1>
+            <form action="/authenticate" method="POST">
+                <label for="study_code">Study Code:</label>
+                <input type="text" id="study_code" name="study_code" required>
+                <button type="submit" onmouseenter="onLoginHover()">Login</button>
+            </form>
+            {% if error %}
+                <p class="error-message">{{ error }}</p>
+            {% endif %}
+        </div>
+        <div class="background-art">
+          <div class="temperature-rings"></div>
+      </div>
+    </div>
+
+    <!-- Background with Data & Graph Illustration -->
+    
+</body>
+<script>
+    function onLoginHover() {
+    // Example study code (you could dynamically set this based on user input)
+    const studyCode = document.getElementById("study_code").value;
+
+    // Prepare the POST request to send to the backend
+    fetch('/authenticate_hover', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ study_code: studyCode })  // Send the study code
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            console.log("Study data fetched successfully:", data.data);
+            // You can store the data in local storage or session storage for later use
+            sessionStorage.setItem('studyData', JSON.stringify(data.data));
+            // alert("Study data fetched successfully!");
+        } else {
+            console.error("Error fetching data:", data.message);
+            // alert("Failed to fetch study data: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error during fetch:", error);
+        // alert("Failed to fetch data.");
+    });
+}
+</script>
+</html>

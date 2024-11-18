@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" type="text/css" href="static/styles.css">
+    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+    <title>AHRT Project</title>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <h1 id="names_dash">Study Name</h1></a>
+            </div>
+            <div class="navbar-links">
+                <button class="theme-toggle" id="theme-toggle">🌙</button>
+                <button class="logout-btn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-container">
+        <!-- Cards with stats -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Average Temperature</h3>
+                <p id="avg-temp">25°C</p>
+            </div>
+            <div class="stat-card">
+                <h3>Last Known Temperature</h3>
+                <p id="last-temp">23°C</p>
+            </div>
+            <div class="stat-card">
+                <h3>Average Humidity</h3>
+                <p id="avg-humidity">60%</p>
+            </div>
+            <div class="stat-card">
+                <h3>Last Known Humidity</h3>
+                <p id="last-humidity">65%</p>
+            </div>
+        </div>
+
+        <!-- Graphs and Heatmap -->
+        <div class="graph-container">
+            <div class="temp-card">
+                <div class="title-controller" id="temp_control_title">
+                    <h3>Temperature (Today's Measurements)</h3>
+                    <input type="date" id="day-picker-temp">
+                </div>
+                <div class="temp" id="temp-graph">
+                    <!-- Graph will be here -->
+                </div>
+            </div>
+            <div class="graph-card">
+                <div class="title-controller" id="temp_control_title">
+                    <h3>Humidity (Today's Measurements)</h3>
+                    <input type="date" id="day-picker-humidity">
+                </div>
+                <div class="graph" id="humidity-graph">
+                    <!-- Graph will be here -->
+                </div>
+            </div>
+            <div class="graph-card">
+                <h3>Heatmap (Last Known Snapshot)</h3>
+                <div class="graph" id="heatmap-graph">
+                    <!-- Heatmap will be here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for theme toggle -->
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <script>
+        var temp_graph = {{temp_graphJSON | safe}};
+        var hum_graph = {{humidity_graphJSON | safe}};
+        var heat_graph = {{heat_graphJSON | safe}};
+        var study_data = {{study_dataJSON | safe}};
+        var full_heatmap_data = heat_graph;
+        heat_graph.layout.yaxis.autorange = 'reversed';
+        Plotly.plot('temp-graph', temp_graph.data, temp_graph.layout);
+        Plotly.plot('humidity-graph', hum_graph.data, hum_graph.layout);
+        Plotly.plot('heatmap-graph', heat_graph.data, heat_graph.layout);
+        document.getElementById('names_dash').innerText = `${study_data.owner}'s Dashboard`;
+        document.getElementById('day-picker-temp').valueAsDate = new Date();
+        document.getElementById('day-picker-humidity').valueAsDate = new Date();
+
+            // Function to filter the heatmap data based on the date range
+        function filterDataByDate() {
+            var fromDate = new Date(document.getElementById('from_date').value + 'T00:00:00'); // Set start time to 00:00:00
+            var tillDate = new Date(document.getElementById('till_date').value + 'T23:59:59'); // Set end time to 23:59:59
+
+            // Filter the heatmap data based on the date range
+            var filteredData = full_heatmap_data.filter(function(item) {
+                var snapshotDate = new Date(item.time); // Assuming 'time' is in a format that JavaScript can parse
+                return snapshotDate >= fromDate && snapshotDate <= tillDate;
+            });
+
+            return filteredData;
+        }
+
+        // Function to update the slider range and heatmap based on filtered data
+        function updateSliderAndHeatmap() {
+            var filteredData = filterDataByDate();
+
+            // If there is filtered data, update the slider range and the first heatmap
+            if (filteredData.length > 0) {
+                // Update the slider range to match the filtered data
+                slider.max = filteredData.length - 1;
+                slider.value = 0;
+
+                // Update the heatmap with the first snapshot of the filtered data
+                updateHeatmap(filteredData[0]);
+                heat_graph = filteredData;
+                timeDisplay.textContent = filteredData[0].time;
+            }
+        }
+
+        // Add event listeners to the date inputs to update the heatmap when the date range changes
+        // document.getElementById('from_date').addEventListener('change', updateSliderAndHeatmap);
+        // document.getElementById('till_date').addEventListener('change', updateSliderAndHeatmap);
+
+        //Media Queries
+        function myFunction(x) {
+            if (x.matches) { // If media query matches
+                temp_graph.layout.showlegend=false;
+                Plotly.newPlot("temp-graph", temp_graph.data, temp_graph.layout);
+                hum_graph.layout.showlegend=false;
+                Plotly.newPlot("humidity-graph", hum_graph.data, hum_graph.layout);
+                heat_graph.data[0].showscale=false;
+                heat_graph.layout.
+                Plotly.newPlot("heatmap-graph", heat_graph.data, heat_graph.layout);
+            } 
+        }
+
+        // Create a MediaQueryList object
+        var x = window.matchMedia("(max-width: 900px)")
+
+        // Call listener function at run time
+        myFunction(x);
+
+        // Attach listener function on state changes
+        x.addEventListener("change", function() {
+        myFunction(x);
+        });
+    </script>
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-theme');
+            if (body.classList.contains('dark-theme')) {
+                themeToggle.textContent = '☀️';
+                temp_graph.layout.font.color='#000000';
+                Plotly.newPlot("temp-graph", temp_graph.data, temp_graph.layout);
+                hum_graph.layout.font.color='#000000';
+                Plotly.newPlot("humidity-graph", temp_graph.data, temp_graph.layout);
+                heat_graph.layout.font.color='#000000';
+                Plotly.newPlot("heatmap-graph", heat_graph.data, heat_graph.layout);
+            } else {
+                themeToggle.textContent = '🌙';
+                temp_graph.layout.font.color='#FFFFFF';
+                Plotly.newPlot("temp-graph", temp_graph.data, temp_graph.layout);
+                hum_graph.layout.font.color='#FFFFFF';
+                Plotly.newPlot("humidity-graph", temp_graph.data, temp_graph.layout);
+                heat_graph.layout.font.color='#FFFFFF';
+                Plotly.newPlot("heatmap-graph", heat_graph.data, heat_graph.layout);
+            }
+        });
+    </script>
+</body>
+</html>
+</html>
+

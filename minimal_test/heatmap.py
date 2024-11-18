@@ -70,7 +70,8 @@ fig_temp = px.line(df_melted,
                    symbol='sensor', # Separate lines by sensor for each room
                     markers=False,
                    title='Temperature Over Time')
-
+fig_temp.update_traces(marker=dict(size=1, line=dict(width=2, color='DarkSlateGrey')), 
+                       line=dict(width=2))  # Customize marker size, line width, etc.
 fig_temp.update_layout(
     legend_title='Room and Sensor',  # Custom title for the legend
     xaxis_title='Time',     # Label for the X-axis
@@ -85,35 +86,129 @@ fig_temp.update_layout(
 fig_hum = px.line(df, x='sens_time', y=['humidity_S1', 'humidity_S2','humidity_S3','humidity_S4','humidity_S5'], color='room_name')
 
 fig_temp.show()
-# Define grid size (M x M)
-# M = 21  # Example for a 10x10 grid
-# points = [(20,5),(20,15),(13,10),(20,10),(10,0),(0,5),(4,2),(6,10),(4,20),(1,13)]
-# cols1 = ['time','20,5','20,15','13,10','20,10','10,0']
-# cols2 = ['0,5','4,2','6,10','4,20','1,13']
-# df = pd.read_csv("minimal_test/study_1001.csv")
-# df['sens_time'] = pd.to_datetime(df['sens_time'])
-# df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
-# df = df.replace(0, np.nan)
-# df1 = df[df['room_name']=="Bedroom"]
-# df2 = df[df['room_name']!="Bedroom"]
-# df1 = df1.drop(columns=['id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
-# df2 = df2.drop(columns=['sens_time','id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
-# # df = df.iloc[::15,:]
-# df1.columns = cols1
-# df2.columns = cols2
-# df1.reset_index(inplace=True, drop=True)
-# df2.reset_index(inplace=True, drop=True)
-# print(df2.head())
-# print(df1.head())
-# df_merged = pd.concat([df1,df2], axis=1, join='outer')
-# print(df_merged.head())
-# df_merged = df_merged.iloc[::3,:]
-# df_test = df_merged.head(6)
-# # Known points and temperatures at those points (row, col, temperature)
+Define grid size (M x M)
+M = 21  # Example for a 10x10 grid
+points = [(20,5),(20,15),(13,10),(20,10),(10,0),(0,5),(4,2),(6,10),(4,20),(1,13)]
+cols1 = ['time','20,5','20,15','13,10','20,10','10,0']
+cols2 = ['0,5','4,2','6,10','4,20','1,13']
+df = pd.read_csv("minimal_test/study_1001.csv")
+df['sens_time'] = pd.to_datetime(df['sens_time'])
+df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+df = df.replace(0, np.nan)
+df1 = df[df['room_name']=="Bedroom"]
+df2 = df[df['room_name']!="Bedroom"]
+df1 = df1.drop(columns=['id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
+df2 = df2.drop(columns=['sens_time','id_study','room_name','humidity_pin17','humidity_pin19','humidity_pin23','humidity_pin32','humidity_pin33'])
+# df = df.iloc[::15,:]
+df1.columns = cols1
+df2.columns = cols2
+df1.reset_index(inplace=True, drop=True)
+df2.reset_index(inplace=True, drop=True)
+print(df2.head())
+print(df1.head())
+df_merged = pd.concat([df1,df2], axis=1, join='outer')
+print(df_merged.head())
+df_merged = df_merged.iloc[::3,:]
+df_test = df_merged.head(6)
+# Known points and temperatures at those points (row, col, temperature)
 
-# for index, snap in df_test.iterrows():
-#     temperatures = list(snap.iloc[1:])
-#     create_heatmap(M, points, temperatures)
+for index, snap in df_test.iterrows():
+    temperatures = list(snap.iloc[1:])
+    create_heatmap(M, points, temperatures)
 
 # Call the function to create the heatmap
 # create_heatmap(M, points, temperatures)
+
+global temp_graphJSON, humidity_graphJSON, heatmap_data, df, layout_points
+
+    get_data()
+    # get_all_study_info()
+    df = study_data
+    df_melted_temp = df.melt(id_vars=['sens_time', 'room_name'], 
+                    value_vars=['temperature_S1', 'temperature_S2', 'temperature_S3', 'temperature_S4', 'temperature_S5'],
+                    var_name='sensor', value_name='temperature')
+    
+    df_melted_hum = df.melt(id_vars=['sens_time', 'room_name'], 
+                    value_vars=['humidity_S1', 'humidity_S2', 'humidity_S3', 'humidity_S4', 'humidity_S5'],
+                    var_name='sensor', value_name='humidity')
+
+    fig_temp = px.line(df_melted_temp, 
+                    x='sens_time', 
+                    y='temperature', 
+                    color='room_name',  # Color by room_name to separate rooms
+                    symbol='sensor', # Separate lines by sensor for each room
+                        markers=False,
+                    title='Temperature Over Time')
+    fig_temp.update_traces(marker=dict(size=2, line=dict(width=2, color='DarkSlateGrey')), 
+                       line=dict(width=2))  # Customize marker size, line width, etc.
+
+    fig_temp.update_layout(
+        legend_title='Room and Sensor',  # Custom title for the legend
+        xaxis_title='Time',     # Label for the X-axis
+        yaxis_title='Temperature (°C)',  # Label for the Y-axis
+        legend=dict(
+            title="Room and Sensor",     # Title for the legend
+            traceorder='normal', # Ensures the order of the traces matches the color scale
+            
+        )
+    )
+    
+    fig_hum = px.line(df_melted_hum, 
+                    x='sens_time', 
+                    y='humidity', 
+                    color='room_name',  # Color by room_name to separate rooms
+                    symbol='sensor', # Separate lines by sensor for each room
+                    markers=True,
+                    title='Humidity Over Time')
+    
+    fig_hum.update_layout(
+        legend_title='Room and Sensor',  # Custom title for the legend
+        xaxis_title='Time',     # Label for the X-axis
+        yaxis_title='Humidity (%)',  # Label for the Y-axis
+        legend=dict(
+            title="Room and Sensor",     # Title for the legend
+            traceorder='normal', # Ensures the order of the traces matches the color scale
+            
+        )
+    )
+
+    # temps = fig_temp
+    # hums =  fig_hum
+    # temps = fig_temp17.data + fig_temp19.data + fig_temp23.data + fig_temp32.data + fig_temp33.data
+    # hums =  fig_hum17.data + fig_hum19.data + fig_hum23.data +  fig_hum32.data + fig_hum33.data
+
+    temp_graphJSON = json.dumps(fig_temp, cls=plotly.utils.PlotlyJSONEncoder)
+    humidity_graphJSON = json.dumps(fig_hum, cls=plotly.utils.PlotlyJSONEncoder)
+
+    M = 21  # Example for a 10x10 grid
+    points = [(20,5),(20,15),(13,10),(20,10),(10,0),(0,5),(4,2),(6,10),(4,20),(1,13)]
+    cols1 = ["time","20,5","20,15","13,10","20,10","10,0"]
+    cols2 = ["0,5","4,2","6,10","4,20","1,13"]
+    cols1 = ['time','20,5','20,15','13,10','20,10','10,0']
+    cols2 = ['0,5','4,2','6,10','4,20','1,13']
+
+    df1 = df[df['room_name']=="Bedroom"]
+    df2 = df[df['room_name']!="Bedroom"]
+    df1 = df1.drop(columns=['room_name','humidity_S1','humidity_S2','humidity_S3','humidity_S4','humidity_S5'])
+    df2 = df2.drop(columns=['sens_time','room_name','humidity_S1','humidity_S2','humidity_S3','humidity_S4','humidity_S5'])
+    # df = df.iloc[::15,:]
+    df1.columns = cols1
+    df2.columns = cols2
+    df1.reset_index(inplace=True, drop=True)
+    df2.reset_index(inplace=True, drop=True)
+    # Assuming `df_test` contains the subset you want to display
+    df_merged = pd.concat([df1, df2], axis=1, join='outer')
+    df_merged.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+    df_test = df_merged
+    # # Create heatmap figures for each snapshot and serialize them to JSON
+    temperatures_data = []
+    for index, snap in df_test.iterrows():
+        temperatures = list(snap.iloc[1:])
+        temps = generate_heatmap_data(M, points, temperatures)  # M = 21 for grid size
+        temperatures_data.append({
+            'time': snap['time'],  # Include timestamp
+            # 'temp_grid': jsonify(temps)
+        })
+        break
+
+    heatmap_data = temperatures_data

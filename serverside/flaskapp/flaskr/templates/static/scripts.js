@@ -39,9 +39,9 @@ function loadGraphOnHover(sectionId, graphDataUrl, graphElementId) {
 }
 
     // Load graphs when hovering and click to show them
-loadGraphOnHover("tempGraphSection", "/api/temp_graph", "temp_chart");
-loadGraphOnHover("humidityGraphSection", "/api/humidity_graph", "humidity_chart");
-loadGraphOnHover("heatmapGraphSection", "/api/heatmap_data", "heatmap_chart");
+loadGraphOnHover("tempGraphSection", "/api/temp_graph", "temp-chart");
+loadGraphOnHover("humidityGraphSection", "/api/humidity_graph", "humidity-chart");
+loadGraphOnHover("heatmapGraphSection", "/api/heatmap_data", "heatmap-chart");
 
 // Time Slider functionality
 var slider = document.getElementById("time-slider");
