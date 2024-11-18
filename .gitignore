@@ -66,6 +66,7 @@ __pycache__/
 
 instance/
 minimal_test/
+local_test/
 
 .pytest_cache/
 .coverage
