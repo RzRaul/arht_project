@@ -1,8 +1,8 @@
-/* 
-	DHT22 temperature sensor driver
+/*
+        DHT22 temperature sensor driver
 */
 
-#ifndef DHT22_H_  
+#ifndef DHT22_H_
 #define DHT22_H_
 
 #define DHT_OK 0
@@ -13,16 +13,16 @@ typedef struct {
     gpio_num_t pin;
     float temp;
     float humidity;
-}dht_data_t;
+} dht_data_t;
 
 // == function prototypes =======================================
 
-void 	set_dht_pin(int gpio);
-void set_dht_pin( int gpio );
-void 	errorHandler(int response);
-int 	readDHT();
-float 	getHumidity();
-float 	getTemperature();
-int 	getSignalLevel( int usTimeOut, bool state );
+void set_dht_pin(int gpio);
+void set_dht_pin(int gpio);
+void errorHandler(int response);
+int readDHT();
+float getHumidity();
+float getTemperature();
+int getSignalLevel(int usTimeOut, bool state);
 
 #endif

@@ -17,8 +17,7 @@ PREPARED_STATEMENT = f"INSERT INTO {TABLE} (sens_time, temp_pin17, humidity_pin1
 # Function to handle client connections
 
 
-def insert_data(data):
-    #Connects to the mariadb local database
+def ask_for_email(data):
     try:
         conn = mariadb.connect(
             user=USER,
@@ -30,21 +29,42 @@ def insert_data(data):
     except mariadb.Error as e:
         print(f"Error connecting to MariaDB Platform: {e}")
         return
-    #Creates a cursor to interact with the database
+    # Creates a cursor to interact with the database
     cur = conn.cursor()
-    #Inserts data into the database
+    # Inserts data into the database
     print(f"STMT -> {PREPARED_STATEMENT}\n")
     cur.execute(PREPARED_STATEMENT, data)
-    #Commits the data
+    # Commits the data
     conn.commit()
-    #error handling
+
+
+def insert_data(data):
+    # Connects to the mariadb local database
+    try:
+        conn = mariadb.connect(
+            user=USER,
+            password="NotARHTPass",
+            host=HOST,
+            port=3306,
+            database=DATABASE
+        )
+    except mariadb.Error as e:
+        print(f"Error connecting to MariaDB Platform: {e}")
+        return
+    # Creates a cursor to interact with the database
+    cur = conn.cursor()
+    # Inserts data into the database
+    print(f"STMT -> {PREPARED_STATEMENT}\n")
+    cur.execute(PREPARED_STATEMENT, data)
+    # Commits the data
+    conn.commit()
+    # error handling
     if cur.rowcount == 1:
         print(f"Data inserted successfully")
     else:
         print(f"Data not inserted")
-    #Closes the connection
+    # Closes the connection
     conn.close()
-
 
 
 def handle_client(conn, addr):
@@ -65,7 +85,7 @@ def handle_client(conn, addr):
             data[-2] = data[-2].decode('utf-8').strip('\x00')
             data = tuple(data)
             print(data)
-            #inserts data into the database
+            # inserts data into the database
             insert_data(data)
         except socket.timeout:
             print("Timing out, closing connection.")

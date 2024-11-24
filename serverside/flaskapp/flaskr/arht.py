@@ -15,9 +15,10 @@ app.config['MYSQL_HOST'] = '192.168.1.200'
 app.config['MYSQL_USER'] = 'lurker'
 app.config['MYSQL_PASSWORD'] = 'LurkPass1'
 app.config['MYSQL_DB'] = 'arht_prod'
-app.config["MYSQL_CUSTOM_OPTIONS"] = {"ssl_mode": 'DISABLED', "ssl":False}  # https://mysqlclient.readthedocs.io/user_guide.html#functions-and-attributes
-PLOT_COLOR = 'rgba(0,0,0,0)';
-PLOT_PAPER_COLOR = 'rgba(0,0,0,0)';
+# https://mysqlclient.readthedocs.io/user_guide.html#functions-and-attributes
+app.config["MYSQL_CUSTOM_OPTIONS"] = {"ssl_mode": 'DISABLED', "ssl": False}
+PLOT_COLOR = 'rgba(0,0,0,0)'
+PLOT_PAPER_COLOR = 'rgba(0,0,0,0)'
 mysql = MySQL(app)
 
 cache = {}
@@ -27,18 +28,22 @@ layout_cache = {}
 graphs_cache = {}
 M = 21
 
+
 def get_data():
     global study_data
     cur = mysql.connection.cursor()
-    cur.execute('''select * from measurements where sens_time > "2024-10-28 00:00:00" and id_study = 1001''')
+    cur.execute(
+        '''select * from measurements where sens_time > "2024-10-28 00:00:00" and id_study = 1001''')
     data = cur.fetchall()
     cur.close()
     df = pd.DataFrame(data)
-    df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
+    df.columns = ['sens_time', 'room_name', 'id_study', 'TS1',
+                  'HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
     df.drop(columns=['id_study'], inplace=True)
     study_data = df.replace(0, np.nan)
     return df.replace(0, np.nan)
+
 
 def get_all_study_info():
     global studies_info
@@ -46,8 +51,9 @@ def get_all_study_info():
     cur.execute(f'''select * from studies LIMIT 10''')
     aux = cur.fetchall()
     for row in aux:
-        studies_info.update({row[0]:row[1:]})
+        studies_info.update({row[0]: row[1:]})
     cur.close()
+
 
 def get_study_info(id_study):
     global studies_info
@@ -57,24 +63,29 @@ def get_study_info(id_study):
         aux = cur.fetchall()
         if aux != None:
             for row in aux:
-                studies_info[str(row[0])] = {'start_date':row[1].strftime('%Y-%m-%d %H:%M'),'end_date':row[2].strftime('%Y-%m-%d %H:%M'),'owner':row[3], 'status':row[4], 'email':row[5]}
-        
-        cur.execute(f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
+                studies_info[str(row[0])] = {'start_date': row[1].strftime(
+                    '%Y-%m-%d %H:%M'), 'end_date': row[2].strftime('%Y-%m-%d %H:%M'), 'owner': row[3], 'status': row[4], 'email': row[5]}
+
+        cur.execute(
+            f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
         aux = cur.fetchall()
         layout_cache[id_study] = {}
         if aux != None:
             for row in aux:
                 layout_cache[id_study][str(row[0])] = row[1:]
 
-        cur.execute(f'''select * from measurements where id_study={id_study}''')
+        cur.execute(
+            f'''select * from measurements where id_study={id_study}''')
         aux = cur.fetchall()
         df = pd.DataFrame(aux)
-        df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
+        df.columns = ['sens_time', 'room_name', 'id_study', 'TS1',
+                      'HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
         # df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
         df.drop(columns=['id_study'], inplace=True)
         df.replace(0, np.nan, inplace=True)
-        cache.update({id_study:df.copy()})
+        cache.update({id_study: df.copy()})
         cur.close()
+
 
 def get_study_info_range(id_study, start_datetime, end_datetime):
     global studies_info
@@ -84,42 +95,47 @@ def get_study_info_range(id_study, start_datetime, end_datetime):
         aux = cur.fetchall()
         if aux != None:
             for row in aux:
-                studies_info[str(row[0])] = {'start_date':row[1].strftime('%Y-%m-%d %H:%M'),'end_date':row[2].strftime('%Y-%m-%d %H:%M'),'owner':row[3], 'status':row[4], 'email':row[5]}
-        
-        cur.execute(f'''SELECT room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study};''')
+                studies_info[str(row[0])] = {'start_date': row[1].strftime(
+                    '%Y-%m-%d %H:%M'), 'end_date': row[2].strftime('%Y-%m-%d %H:%M'), 'owner': row[3], 'status': row[4], 'email': row[5]}
+
+        cur.execute(
+            f'''SELECT room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study};''')
         aux = cur.fetchall()
         layout_cache[id_study] = {}
         if aux != None:
             for row in aux:
                 layout_cache[id_study][str(row[0])] = row[1:]
 
-        cur.execute(f'''select * from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}";''')
+        cur.execute(
+            f'''select * from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}";''')
         aux = cur.fetchall()
         df = pd.DataFrame(aux)
-        df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
+        df.columns = ['sens_time', 'room_name', 'id_study', 'TS1',
+                      'HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
         # df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
         df.drop(columns=['id_study'], inplace=True)
         df.replace(0, np.nan, inplace=True)
-        cache.update({id_study:df.copy()})
+        cache.update({id_study: df.copy()})
         cur.close()
+
 
 def generate_temp_graph(id_study):
     data = cache[id_study]
     if data is None:
         get_study_info(id_study)
 
-    df_melted_temp = data.melt(id_vars=['sens_time', 'room_name'], 
-                    value_vars=['TS1', 'TS2', 'TS3', 'TS4', 'TS5'],
-                    var_name='sensor', value_name='temperature')
+    df_melted_temp = data.melt(id_vars=['sens_time', 'room_name'],
+                               value_vars=['TS1', 'TS2', 'TS3', 'TS4', 'TS5'],
+                               var_name='sensor', value_name='temperature')
 
-    fig_temp = px.line(df_melted_temp, 
-                    x='sens_time', 
-                    y='temperature', 
-                    color='room_name',  # Color by room_name to separate rooms
-                    symbol='sensor', # Separate lines by sensor for each room
-                    markers=False,)
-    fig_temp.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')), 
-                       line=dict(width=3))  # Customize marker size, line width, etc.
+    fig_temp = px.line(df_melted_temp,
+                       x='sens_time',
+                       y='temperature',
+                       color='room_name',  # Color by room_name to separate rooms
+                       symbol='sensor',  # Separate lines by sensor for each room
+                       markers=False,)
+    fig_temp.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')),
+                           line=dict(width=3))  # Customize marker size, line width, etc.
 
     fig_temp.update_layout(
         legend_title='Room and Sensor',  # Custom title for the legend
@@ -127,17 +143,17 @@ def generate_temp_graph(id_study):
         yaxis_title='Temperature (°C)',  # Label for the Y-axis
         legend=dict(
             title="Room and Sensor",     # Title for the legend
-            traceorder='normal', # Ensures the order of the traces matches the color scale
+            traceorder='normal',  # Ensures the order of the traces matches the color scale
             # yanchor="top",
             # y=0.99,
             # xanchor="right",
             # x=0.01
         ),
         margin=go.layout.Margin(
-            l=0, #left margin
-            r=0, #right margin
-            b=0, #bottom margin
-            t=0  #top margin
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
         ),
         paper_bgcolor=PLOT_PAPER_COLOR,
         plot_bgcolor=PLOT_COLOR,
@@ -159,23 +175,24 @@ def generate_temp_graph(id_study):
 
     return json.dumps(fig_temp, cls=plotly.utils.PlotlyJSONEncoder)
 
+
 def generate_hum_graph(id_study):
     data = cache[id_study]
     if data is None:
         get_study_info(id_study)
-       
-    df_melted_hum = data.melt(id_vars=['sens_time', 'room_name'], 
-                    value_vars=['HS1', 'HS2', 'HS3', 'HS4', 'HS5'],
-                    var_name='sensor', value_name='humidity')
 
-    fig_hum = px.line(df_melted_hum, 
-                    x='sens_time', 
-                    y='humidity', 
-                    color='room_name',  # Color by room_name to separate rooms
-                    symbol='sensor', # Separate lines by sensor for each room
-                    markers=False,)
-    fig_hum.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')), 
-                       line=dict(width=3))  # Customize marker size, line width, etc.
+    df_melted_hum = data.melt(id_vars=['sens_time', 'room_name'],
+                              value_vars=['HS1', 'HS2', 'HS3', 'HS4', 'HS5'],
+                              var_name='sensor', value_name='humidity')
+
+    fig_hum = px.line(df_melted_hum,
+                      x='sens_time',
+                      y='humidity',
+                      color='room_name',  # Color by room_name to separate rooms
+                      symbol='sensor',  # Separate lines by sensor for each room
+                      markers=False,)
+    fig_hum.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')),
+                          line=dict(width=3))  # Customize marker size, line width, etc.
 
     fig_hum.update_layout(
         legend_title='Room and Sensor',  # Custom title for the legend
@@ -183,17 +200,17 @@ def generate_hum_graph(id_study):
         yaxis_title='Humidity (%)',  # Label for the Y-axis
         legend=dict(
             title="Room and Sensor",     # Title for the legend
-            traceorder='normal', # Ensures the order of the traces matches the color scale 
+            traceorder='normal',  # Ensures the order of the traces matches the color scale
             # yanchor="top",
             # y=0.99,
             # xanchor="right",
             # x=0.01
         ),
         margin=go.layout.Margin(
-            l=0, #left margin
-            r=0, #right margin
-            b=0, #bottom margin
-            t=0  #top margin
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
         ),
         paper_bgcolor=PLOT_PAPER_COLOR,
         plot_bgcolor=PLOT_COLOR,
@@ -214,12 +231,15 @@ def generate_hum_graph(id_study):
     )
 
     return json.dumps(fig_hum, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
+
 def generate_heatmap_data(M, points, temperatures, jsonable=True):
-    grid_x, grid_y = np.meshgrid(np.linspace(0, M-1, M), np.linspace(0, M-1, M))
+    grid_x, grid_y = np.meshgrid(
+        np.linspace(0, M-1, M), np.linspace(0, M-1, M))
     known_points = np.array(points)
     known_temperatures = np.array(temperatures)
-    rbf = Rbf(known_points[:, 0], known_points[:, 1], known_temperatures, function='multiquadric')
+    rbf = Rbf(known_points[:, 0], known_points[:, 1],
+              known_temperatures, function='multiquadric')
     grid_temperatures = rbf(grid_x, grid_y)
     temperature_grid = grid_temperatures.reshape(M, M)
     if jsonable:
@@ -227,30 +247,31 @@ def generate_heatmap_data(M, points, temperatures, jsonable=True):
     else:
         return temperature_grid
 
+
 def generate_temp_graph_range(id_study, start_datetime, end_datetime):
     cur = mysql.connection.cursor()
-    cur.execute(f'''SELECT sens_time, room_name, temp_pin17, temp_pin19, temp_pin23, temp_pin32, temp_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
+    cur.execute(
+        f'''SELECT sens_time, room_name, temp_pin17, temp_pin19, temp_pin23, temp_pin32, temp_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
     aux = cur.fetchall()
     df = pd.DataFrame(aux)
     cur.close()
-    df.columns = ['sens_time','room_name','TS1','TS2','TS3','TS4','TS5']
+    df.columns = ['sens_time', 'room_name', 'TS1', 'TS2', 'TS3', 'TS4', 'TS5']
     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
     df.replace(0, np.nan, inplace=True)
     # cache.update({id_study:df.copy()})
-    
-    
-    df_melted_temp = df.melt(id_vars=['sens_time', 'room_name'], 
-                    value_vars=['TS1', 'TS2', 'TS3', 'TS4', 'TS5'],
-                    var_name='sensor', value_name='temperature')
 
-    fig_temp = px.line(df_melted_temp, 
-                    x='sens_time', 
-                    y='temperature', 
-                    color='room_name',  # Color by room_name to separate rooms
-                    symbol='sensor', # Separate lines by sensor for each room
-                    markers=False,)
-    fig_temp.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')), 
-                       line=dict(width=3))  # Customize marker size, line width, etc.
+    df_melted_temp = df.melt(id_vars=['sens_time', 'room_name'],
+                             value_vars=['TS1', 'TS2', 'TS3', 'TS4', 'TS5'],
+                             var_name='sensor', value_name='temperature')
+
+    fig_temp = px.line(df_melted_temp,
+                       x='sens_time',
+                       y='temperature',
+                       color='room_name',  # Color by room_name to separate rooms
+                       symbol='sensor',  # Separate lines by sensor for each room
+                       markers=False,)
+    fig_temp.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')),
+                           line=dict(width=3))  # Customize marker size, line width, etc.
 
     fig_temp.update_layout(
         legend_title='Room and Sensor',  # Custom title for the legend
@@ -258,17 +279,17 @@ def generate_temp_graph_range(id_study, start_datetime, end_datetime):
         yaxis_title='Temperature (°C)',  # Label for the Y-axis
         legend=dict(
             title="Room and Sensor",     # Title for the legend
-            traceorder='normal', # Ensures the order of the traces matches the color scale
+            traceorder='normal',  # Ensures the order of the traces matches the color scale
             # yanchor="top",
             # y=0.99,
             # xanchor="right",
             # x=0.01
         ),
         margin=go.layout.Margin(
-            l=0, #left margin
-            r=0, #right margin
-            b=0, #bottom margin
-            t=0  #top margin
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
         ),
         paper_bgcolor=PLOT_PAPER_COLOR,
         plot_bgcolor=PLOT_COLOR,
@@ -290,29 +311,31 @@ def generate_temp_graph_range(id_study, start_datetime, end_datetime):
 
     return json.dumps(fig_temp, cls=plotly.utils.PlotlyJSONEncoder)
 
+
 def generate_hum_graph_range(id_study, start_datetime, end_datetime):
     cur = mysql.connection.cursor()
-    cur.execute(f'''SELECT sens_time,room_name, humidity_pin17, humidity_pin19, humidity_pin23, humidity_pin32, humidity_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
+    cur.execute(
+        f'''SELECT sens_time,room_name, humidity_pin17, humidity_pin19, humidity_pin23, humidity_pin32, humidity_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
     aux = cur.fetchall()
     df = pd.DataFrame(aux)
     cur.close()
-    df.columns = ['sens_time','room_name','HS1', 'HS2', 'HS3', 'HS4', 'HS5']
+    df.columns = ['sens_time', 'room_name', 'HS1', 'HS2', 'HS3', 'HS4', 'HS5']
     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
     df.replace(0, np.nan, inplace=True)
     # cache.update({id_study:df.copy()})_day+" 23:59:59")]
-    
-    df_melted_hum = df.melt(id_vars=['sens_time', 'room_name'], 
-                    value_vars=['HS1', 'HS2', 'HS3', 'HS4', 'HS5'],
-                    var_name='sensor', value_name='humidity')
 
-    fig_hum = px.line(df_melted_hum, 
-                    x='sens_time', 
-                    y='humidity', 
-                    color='room_name',  # Color by room_name to separate rooms
-                    symbol='sensor', # Separate lines by sensor for each room
-                    markers=False,)
-    fig_hum.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')), 
-                       line=dict(width=3))  # Customize marker size, line width, etc.
+    df_melted_hum = df.melt(id_vars=['sens_time', 'room_name'],
+                            value_vars=['HS1', 'HS2', 'HS3', 'HS4', 'HS5'],
+                            var_name='sensor', value_name='humidity')
+
+    fig_hum = px.line(df_melted_hum,
+                      x='sens_time',
+                      y='humidity',
+                      color='room_name',  # Color by room_name to separate rooms
+                      symbol='sensor',  # Separate lines by sensor for each room
+                      markers=False,)
+    fig_hum.update_traces(marker=dict(size=1, line=dict(width=1, color='DarkSlateGrey')),
+                          line=dict(width=3))  # Customize marker size, line width, etc.
 
     fig_hum.update_layout(
         legend_title='Room and Sensor',  # Custom title for the legend
@@ -320,17 +343,17 @@ def generate_hum_graph_range(id_study, start_datetime, end_datetime):
         yaxis_title='Humidity (%)',  # Label for the Y-axis
         legend=dict(
             title="Room and Sensor",     # Title for the legend
-            traceorder='normal', # Ensures the order of the traces matches the color scale 
+            traceorder='normal',  # Ensures the order of the traces matches the color scale
             # yanchor="top",
             # y=0.99,
             # xanchor="right",
             # x=0.01
         ),
         margin=go.layout.Margin(
-            l=0, #left margin
-            r=0, #right margin
-            b=0, #bottom margin
-            t=0  #top margin
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
         ),
         paper_bgcolor=PLOT_PAPER_COLOR,
         plot_bgcolor=PLOT_COLOR,
@@ -352,13 +375,16 @@ def generate_hum_graph_range(id_study, start_datetime, end_datetime):
 
     return json.dumps(fig_hum, cls=plotly.utils.PlotlyJSONEncoder)
 
+
 def generate_heat_graph_range(id_study, start_datetime, end_datetime):
     cur = mysql.connection.cursor()
-    cur.execute(f'''SELECT sens_time, room_name, temp_pin17, temp_pin19, temp_pin23, temp_pin32, temp_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
+    cur.execute(
+        f'''SELECT sens_time, room_name, temp_pin17, temp_pin19, temp_pin23, temp_pin32, temp_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
     aux = cur.fetchall()
     df = pd.DataFrame(aux)
 
-    cur.execute(f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
+    cur.execute(
+        f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
     aux = cur.fetchall()
     layouts = {}
     if aux != None:
@@ -368,42 +394,45 @@ def generate_heat_graph_range(id_study, start_datetime, end_datetime):
     cur.close()
     dfs = []
     points = get_points_from_layouts(layouts)
-    df.columns = ['sens_time','room_name','TS1','TS2','TS3','TS4','TS5']
+    df.columns = ['sens_time', 'room_name', 'TS1', 'TS2', 'TS3', 'TS4', 'TS5']
     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
     df.replace(0, np.nan, inplace=True)
     drop_time = False
     new_cols = ['time']
-    #Creates the frame [time, point1, point2, point3, point4, point5] as columns
+    # Creates the frame [time, point1, point2, point3, point4, point5] as columns
     for layout in layouts:
         for col in layouts[layout]:
             new_cols.append(col)
         df_aux = df[df['room_name'] == layout]
-        #drops humidity because we just care about temperature
+        # drops humidity because we just care about temperature
         if not drop_time:
             df_aux.drop(columns=['room_name'], inplace=True)
-            #After first layout, drop time to not duplicate
+            # After first layout, drop time to not duplicate
             drop_time = True
         else:
-            df_aux.drop(columns=['sens_time','room_name'], inplace=True)
+            df_aux.drop(columns=['sens_time', 'room_name'], inplace=True)
         df_aux.reset_index(inplace=True, drop=True)
         dfs.append(df_aux.copy())
 
     # Assuming `df_test` contains the subset you want to display
     df_merged = pd.concat(dfs, axis=1, join='outer')
-    df_merged.columns= new_cols
-    df_merged.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+    df_merged.columns = new_cols
+    df_merged.interpolate(
+        method='linear', limit_direction='forward', axis=0, inplace=True)
     df_test = df_merged
     # # Create heatmap figures for each snapshot and serialize them to JSON
     temperatures_data = []
     for index, snap in df_test.iterrows():
         temperatures = list(snap.iloc[1:])
-        temps = generate_heatmap_data(M, points, temperatures)  # M = 21 for grid size
+        temps = generate_heatmap_data(
+            M, points, temperatures)  # M = 21 for grid size
         temperatures_data.append({
             'time': snap['time'],  # Include timestamp
             'temp_grid': temps,
         })
-    
+
     return json.dumps(temperatures_data)
+
 
 def generate_last_heatmap_from_cache(id_study, json_format=True):
     if id_study not in studies_info:
@@ -415,13 +444,14 @@ def generate_last_heatmap_from_cache(id_study, json_format=True):
     figure = go.Figure(data=go.Heatmap(
         z=temperature_grid,
         colorscale='Turbo',
-        colorbar=dict(title='Temperature (°C)', tickvals=[8, 30], ticktext=['8°C', '30°C']),
+        colorbar=dict(title='Temperature (°C)', tickvals=[
+                      8, 30], ticktext=['8°C', '30°C']),
         zmin=8,  # Set minimum value for color scale
         zmax=30,  # Set maximum value for color scale
     ))
     sensor_x = known_points[:, 0]  # X-coordinates of sensor positions
     sensor_y = known_points[:, 1]  # Y-coordinates of sensor positions
-    
+
     # Create a scatter trace for sensor positions
     sensor_trace = go.Scatter(
         x=sensor_x,
@@ -445,10 +475,10 @@ def generate_last_heatmap_from_cache(id_study, json_format=True):
         yaxis_title='Y Coordinate',
         coloraxis=dict(cmin=10, cmax=30),
         margin=go.layout.Margin(
-            l=0, #left margin
-            r=0, #right margin
-            b=0, #bottom margin
-            t=0  #top margin
+            l=0,  # left margin
+            r=0,  # right margin
+            b=0,  # bottom margin
+            t=0  # top margin
         ),
         paper_bgcolor=PLOT_PAPER_COLOR,
         plot_bgcolor=PLOT_COLOR,
@@ -458,25 +488,29 @@ def generate_last_heatmap_from_cache(id_study, json_format=True):
     else:
         return figure
 
+
 def generate_heatmap_figure(M, points, temperatures):
-    grid_x, grid_y = np.meshgrid(np.linspace(0, M-1, M), np.linspace(0, M-1, M))
+    grid_x, grid_y = np.meshgrid(
+        np.linspace(0, M-1, M), np.linspace(0, M-1, M))
     known_points = np.array(points)
     known_temperatures = np.array(temperatures)
 
-    rbf = Rbf(known_points[:, 0], known_points[:, 1], known_temperatures, function='multiquadric')
+    rbf = Rbf(known_points[:, 0], known_points[:, 1],
+              known_temperatures, function='multiquadric')
     grid_temperatures = rbf(grid_x, grid_y)
 
     temperature_grid = grid_temperatures.reshape(M, M)
     figure = go.Figure(data=go.Heatmap(
         z=temperature_grid,
         colorscale='Turbo',
-        colorbar=dict(title='Temperature (°C)', tickvals=[8, 30], ticktext=['8°C', '30°C']),
+        colorbar=dict(title='Temperature (°C)', tickvals=[
+                      8, 30], ticktext=['8°C', '30°C']),
         zmin=8,  # Set minimum value for color scale
         zmax=30,  # Set maximum value for color scale
     ))
     sensor_x = known_points[:, 0]  # X-coordinates of sensor positions
     sensor_y = known_points[:, 1]  # Y-coordinates of sensor positions
-    
+
     # Create a scatter trace for sensor positions
     sensor_trace = go.Scatter(
         x=sensor_x,
@@ -503,8 +537,8 @@ def generate_heatmap_figure(M, points, temperatures):
         plot_bgcolor=PLOT_COLOR,
     )
 
-
     return figure
+
 
 def get_points_from_layouts(layouts):
     if layouts is None:
@@ -513,8 +547,9 @@ def get_points_from_layouts(layouts):
     for layout in layouts:
         for point in layouts[layout]:
             points.append(tuple(int(x) for x in point.split(',')))
-        
+
     return points
+
 
 def generate_heatmap_sequence(id_study):
     if id_study in studies_info:
@@ -530,31 +565,35 @@ def generate_heatmap_sequence(id_study):
         # df = df[]
         drop_time = False
         new_cols = ['time']
-        #Creates the frame [time, point1, point2, point3, point4, point5] as columns
+        # Creates the frame [time, point1, point2, point3, point4, point5] as columns
         for layout in layouts:
             for col in layouts[layout]:
                 new_cols.append(col)
             df_aux = df[df['room_name'] == layout]
-            #drops humidity because we just care about temperature
+            # drops humidity because we just care about temperature
             if not drop_time:
-                df_aux.drop(columns=['room_name','HS1','HS2','HS3','HS4','HS5'], inplace=True)
-                #After first layout, drop time to not duplicate
+                df_aux.drop(columns=['room_name', 'HS1',
+                            'HS2', 'HS3', 'HS4', 'HS5'], inplace=True)
+                # After first layout, drop time to not duplicate
                 drop_time = True
             else:
-                df_aux.drop(columns=['sens_time','room_name','HS1','HS2','HS3','HS4','HS5'], inplace=True)
+                df_aux.drop(columns=['sens_time', 'room_name',
+                            'HS1', 'HS2', 'HS3', 'HS4', 'HS5'], inplace=True)
             df_aux.reset_index(inplace=True, drop=True)
             dfs.append(df_aux.copy())
 
         # Assuming `df_test` contains the subset you want to display
         df_merged = pd.concat(dfs, axis=1, join='outer')
-        df_merged.columns= new_cols
-        df_merged.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+        df_merged.columns = new_cols
+        df_merged.interpolate(
+            method='linear', limit_direction='forward', axis=0, inplace=True)
         df_test = df_merged
         # # Create heatmap figures for each snapshot and serialize them to JSON
         temperatures_data = []
         for index, snap in df_test.iterrows():
             temperatures = list(snap.iloc[1:])
-            temps = generate_heatmap_data(M, points, temperatures)  # M = 21 for grid size
+            temps = generate_heatmap_data(
+                M, points, temperatures)  # M = 21 for grid size
             temperatures_data.append({
                 'time': snap['time'],  # Include timestamp
                 'temp_grid': temps,
@@ -562,39 +601,48 @@ def generate_heatmap_sequence(id_study):
 
         return temperatures_data
 
+
 def load_cache(id_study, force_load=False):
     loaded = False
     if id_study not in studies_info:
         today = date.today().strftime("%Y-%m-%d")
-        get_study_info_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
+        get_study_info_range(
+            id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
 
     if id_study in studies_info:
         if id_study not in graphs_cache or force_load:
-            graphs_cache.update({id_study:{}})
-            graphs_cache[id_study].update({'temp': generate_temp_graph(id_study)})
-            graphs_cache[id_study].update({'hum': generate_hum_graph(id_study)})
+            graphs_cache.update({id_study: {}})
+            graphs_cache[id_study].update(
+                {'temp': generate_temp_graph(id_study)})
+            graphs_cache[id_study].update(
+                {'hum': generate_hum_graph(id_study)})
         if id_study not in heatmap_cache or force_load:
-            heatmap_cache.update({id_study:generate_heatmap_sequence(id_study)})
+            heatmap_cache.update(
+                {id_study: generate_heatmap_sequence(id_study)})
         loaded = True
 
     return loaded
-    
+
+
 with app.app_context():
     pass
+
 
 @app.route('/')
 def login():
     return render_template('login.html')
 
+
 @app.route('/authenticate_hover', methods=['POST'])
 def authenticate_hover():
     # Get the study code sent in the request body
     id_study = request.json.get('study_code')
-    
+
     if load_cache(id_study):
         return jsonify({"status": "success", "data": id_study})
     else:
         return jsonify({"status": "error", "message": "Invalid study code"}), 400
+
 
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
@@ -606,14 +654,15 @@ def authenticate():
         # Invalid code
         return render_template('login.html', error="Invalid study code")
 
+
 @app.route('/study_dashboard')
 def study_dashboard():
     if 'id_study' not in session:
         return redirect(url_for('login'))
-    
+
     # Get study code from session
     id_study = session['id_study']
-    
+
     # If the study data is not in cache, load it (for demo purposes, we're simulating this)
     if id_study not in cache:
         # Here you would load the study data (e.g., from a database or external API)
@@ -621,20 +670,25 @@ def study_dashboard():
         # load_cache(id_study, force_load=True)
 
     today = date.today().strftime("%Y-%m-%d")
-    temp_today = generate_temp_graph_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
-    hum_today = generate_hum_graph_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
+    temp_today = generate_temp_graph_range(
+        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
+    hum_today = generate_hum_graph_range(
+        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
     info = json.dumps(studies_info[id_study])
     layout = layout_cache[id_study]
     heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
-    heatmap_today = generate_heat_graph_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
+    heatmap_today = generate_heat_graph_range(
+        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
     # Pass the data to the study dashboard template
     study_data = studies_info[id_study]
     return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last_snapshot, humidity_graphJSON=hum_today, temp_graphJSON=temp_today, heatmap_seq=heatmap_today)
+
 
 @app.route('/logout')
 def logout():
     session.pop('study_code', None)
     return redirect(url_for('login'))
+
 
 @app.route('/api/temp_graph')
 def get_temp_graph():
@@ -645,7 +699,8 @@ def get_temp_graph():
     # This should fetch temperature data from your database
 
     cur = mysql.connection.cursor()
-    cur.execute('''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
+    cur.execute(
+        '''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
     data = cur.fetchall()
     cur.close()
     # df = pd.read_csv("study_1001.csv")
@@ -653,21 +708,25 @@ def get_temp_graph():
     df = pd.DataFrame(data)
     return jsonify(temp_graph_data)
 
+
 @app.route('/api/humidity_graph')
 def get_humidity_graph():
     # Fetch humidity data from the database
     humidity_graph_data = {
         "data": [
-            {"x": [1, 2, 3], "y": [50, 60, 70], "type": "scatter", "mode": "lines+markers"}
+            {"x": [1, 2, 3], "y": [50, 60, 70],
+                "type": "scatter", "mode": "lines+markers"}
         ],
         "layout": {"title": "Humidity Graph"}
     }
     return jsonify(humidity_graph_data)
 
+
 @app.route('/api/heatmap_data')
 def get_heatmap_data():
     cur = mysql.connection.cursor()
-    cur.execute('''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
+    cur.execute(
+        '''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
     data = cur.fetchall()
     cur.close()
     # df = pd.read_csv("study_1001.csv")
@@ -675,45 +734,53 @@ def get_heatmap_data():
     df = pd.DataFrame(data)
     return jsonify(heatmap_data)
 
-#debug data
+# debug data
+
+
 @app.route("/debug_data_custom")
 def raw_data():
     cur = mysql.connection.cursor()
-    cur.execute('''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
+    cur.execute(
+        '''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
     data = cur.fetchall()
     cur.close()
     df = pd.DataFrame(data)
-    
-    df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
+
+    df.columns = ['sens_time', 'room_name', 'id_study', 'TS1',
+                  'HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
     df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
     df.drop(columns=['id_study'], inplace=True)
     df = df.replace(0, np.nan)
-    fig_temp = px.line(df, x='sens_time', y=['TS1','TS2','TS3','TS4','TS5']
-                         , color='room_name'
-                         ,)
-    fig_hum = px.line(df, x='sens_time', y=['HS1', 'HS2','HS3','HS4','HS5'], color='room_name', symbols=['HS1', 'HS2','HS3','HS4','HS5'])
+    fig_temp = px.line(df, x='sens_time', y=[
+                       'TS1', 'TS2', 'TS3', 'TS4', 'TS5'], color='room_name',)
+    fig_hum = px.line(df, x='sens_time', y=['HS1', 'HS2', 'HS3', 'HS4', 'HS5'], color='room_name', symbols=[
+                      'HS1', 'HS2', 'HS3', 'HS4', 'HS5'])
     temps = fig_temp.data
-    hums =  fig_hum.data
+    hums = fig_hum.data
 
-    temp_graphJSON = json.dumps(go.Figure(data=temps), cls=plotly.utils.PlotlyJSONEncoder)
-    humidity_graphJSON = json.dumps(go.Figure(data=hums), cls=plotly.utils.PlotlyJSONEncoder)
-    
-    return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
+    temp_graphJSON = json.dumps(
+        go.Figure(data=temps), cls=plotly.utils.PlotlyJSONEncoder)
+    humidity_graphJSON = json.dumps(
+        go.Figure(data=hums), cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template("show_data.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
+
 
 @app.route("/debug_data")
 def get_data_cached():
-       return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
+    return render_template("show_data.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
 
 
 @app.route("/heatmap")
 def heatmap_site():
-    
-    return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
+
+    return render_template("show_data.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
+
 
 @app.route("/graphs")
 def show_all_graphs():
-    
-    return render_template("show_graphs.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
+
+    return render_template("show_graphs.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
 
 
 @app.route("/temperature")
@@ -724,15 +791,17 @@ def get_temp_by():
     id_study = request.args.get("id_study")
     print(f"get->{get_by}  from->{from_date} till->{till_date}")
     cur = mysql.connection.cursor()
-    cur.execute(f'''select room_name from measurements where id_study={int(id_study)};''')
+    cur.execute(
+        f'''select room_name from measurements where id_study={int(id_study)};''')
     data = cur.fetchall()
 
     if (get_by == "sensor"):
-        cur.execute('''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
+        cur.execute(
+            '''select * from measurements where sens_time > "2024-10-28 00:00:00"''')
 
     data = cur.fetchall()
     cur.close()
-    return render_template("index.html") 
+    return render_template("index.html")
 # @app.route('/heatmap_data')
 # def heatmap_data_func():
 #     M = 21  # Example for a 10x10 grid
@@ -755,7 +824,7 @@ def get_temp_by():
 #     # Assuming `df_test` contains the subset you want to display
 #     df_merged = pd.concat([df1, df2], axis=1, join='outer')
 #     df_test = df_merged.iloc[::2,:]
-    
+
 #     # For each time snapshot, get the temperature data
 #     temperatures_data = []
 #     for index, snap in df_test.iterrows():
@@ -765,8 +834,9 @@ def get_temp_by():
 #             'time': snap['time'],  # Include timestamp
 #             'data': heatmap
 #         })
-    
+
 #     return render_template("show_data.html",temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=temperatures_data)
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

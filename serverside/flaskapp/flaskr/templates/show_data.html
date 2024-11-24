@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" type="text/css" href="static/styles.css">
+    <title>AHRT Project</title>
+</head>
+<body>
+    <div id="dashboard">
+        <!-- Navigation Bar -->
+        <div id="navBar">
+            <ul>
+                <li><a class="active" href="#home">Home</a></li>
+                <li><a href="#news">News</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </div>
+
+        <div id="content">
+            <!-- Graphs Section -->
+            <div class="chart-container">
+                <div class="collapsible-sections" id="tempGraphSection">
+                    <div class="section-header">Temperature Graph</div>
+                    <div id="temp_chart" class="chart" data-loaded="false"></div>
+                </div>
+                <div class="collapsible-sections" id="humidityGraphSection">
+                    <div class="section-header">Humidity Graph</div>
+                    <div id="humidity_chart" class="chart" data-loaded="false"></div>
+                </div>
+            </div>
+
+            <h1>Temperature Heatmap - Time of Day</h1>
+            <div class="collapsible-sections" id="heatmapGraphSection">
+                <div class="section-header">Heatmap</div>
+                <div id="heatmap_chart" class="chart" data-loaded="false"></div>
+            </div>
+
+            <!-- Time Slider -->
+            <div class="slider-container">
+                <label for="time-slider" class="slider-label">Time of Day: <span id="time-label">0</span> hrs</label><br>
+                <input type="range" id="time-slider" min="0" max="73" value="0" step="1">
+            </div>
+        </div>
+    </div>
+
+    <!-- Plotly JS -->
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <script type='text/javascript'>
+        var temp_graph = {{temp_graphJSON | safe}};
+        var hum_graph = {{humidity_graphJSON | safe}};
+        var heatmap_data = {{heat_graphJSON | safe}};
+        
+        function loadGraphOnHover(sectionId, graphDataUrl, graphElementId) {
+            var section = document.getElementById(sectionId);
+            var graphElement = document.getElementById(graphElementId);
+            var dataLoaded = graphElement.getAttribute('data-loaded');
+
+            // Load data on hover
+            section.addEventListener('mouseenter', function() {
+                if (dataLoaded === 'false') {
+                    // Fetch graph data from the API
+                    fetch(graphDataUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Store the graph data in the element
+                            graphElement.setAttribute('data-graph', JSON.stringify(data));
+                            graphElement.setAttribute('data-loaded', 'true');
+                        })
+                        .catch(error => {
+                            console.error('Error loading graph data:', error);
+                        });
+                }
+            });
+
+            // Show the graph on click
+            section.addEventListener('click', function() {
+                if (dataLoaded === 'true') {
+                    var graphData = JSON.parse(graphElement.getAttribute('data-graph'));
+                    // Plot the graph
+                    Plotly.newPlot(graphElement, graphData.data, graphData.layout);
+                    // Make the chart visible after it is loaded
+                    graphElement.style.display = 'block';
+                }
+            });
+        }
+
+        // Load graphs when hovering and click to show them
+        loadGraphOnHover("tempGraphSection", "/api/temp_graph", "temp_chart");
+        loadGraphOnHover("humidityGraphSection", "/api/humidity_graph", "humidity_chart");
+        loadGraphOnHover("heatmapGraphSection", "/api/heatmap_data", "heatmap_chart");
+
+        // Time Slider functionality
+        var slider = document.getElementById("time-slider");
+        var timeDisplay = document.getElementById("time-label");
+
+        // Function to update the heatmap for a given snapshot
+        function updateHeatmap(snapshot) {
+            var tempGraphJSON = snapshot.graph;
+            var heatmapData = JSON.parse(tempGraphJSON);
+            heatmapData.layout.yaxis.autorange = 'reversed';
+            Plotly.newPlot('heatmap_chart', heatmapData.data, heatmapData.layout);
+        }
+
+        // Initialize the first heatmap and display time
+        updateHeatmap(heatmap_data[0]);
+        timeDisplay.textContent = heatmap_data[0].time;
+
+        // Event listener for the slider to update the heatmap when the time changes
+        slider.addEventListener("input", function() {
+            var index = slider.value;
+            timeDisplay.textContent = heatmap_data[index].time;
+            updateHeatmap(heatmap_data[index]);
+        });
+    </script>
+</body>
+</html>
+

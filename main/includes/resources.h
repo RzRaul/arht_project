@@ -8,8 +8,8 @@
 #define ADC_WIDTH ADC_BITWIDTH_12
 #define ADC_ATTEN ADC_ATTEN_DB_0
 #define RESOURCE_LED GPIO_NUM_2
-#define ELEMENT_LED     'L'
-#define ELEMENT_ADC     'A'
+#define ELEMENT_LED 'L'
+#define ELEMENT_ADC 'A'
 
 static adc_oneshot_unit_handle_t adc_unit_handler;
 
@@ -19,6 +19,5 @@ int get_resource(char resource);
 int set_resource(char resource, int value);
 void adc_init();
 void setupPins();
-
 
 #endif

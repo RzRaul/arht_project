@@ -1,37 +1,37 @@
 #include "resources.h"
 #include "commands.h"
+#include "hal/gpio_types.h"
 
-int read_adc_(){
+int read_adc_() {
     int raw;
     adc_oneshot_read(adc_unit_handler, ADC_CHANNEL, &raw);
     return raw;
 }
 
-int get_resource(char resource){
-    int raw;
-    switch (resource){
-        case ELEMENT_LED:
-            return gpio_get_level(RESOURCE_LED);
-        case ELEMENT_ADC:
-            return read_adc_();
-        default:
-            return -1;
+int get_resource(char resource) {
+    switch (resource) {
+    case ELEMENT_LED:
+        return gpio_get_level(RESOURCE_LED);
+    case ELEMENT_ADC:
+        return read_adc_();
+    default:
+        return -1;
     }
 }
 
-int set_resource(char resource, int value){
-    switch (resource){
-        case ELEMENT_LED:
-            gpio_set_level(RESOURCE_LED, value);
-            return get_resource(ELEMENT_LED);
-        case ELEMENT_ADC:
-            return get_resource(ELEMENT_ADC);
-        default:
-            return -1;
+int set_resource(char resource, int value) {
+    switch (resource) {
+    case ELEMENT_LED:
+        gpio_set_level(RESOURCE_LED, value);
+        return get_resource(ELEMENT_LED);
+    case ELEMENT_ADC:
+        return get_resource(ELEMENT_ADC);
+    default:
+        return -1;
     }
 }
 
-void adc_init(){
+void adc_init() {
     adc_oneshot_unit_init_cfg_t adc_init = {
         .unit_id = ADC_UNIT_1,
     };
@@ -40,20 +40,29 @@ void adc_init(){
         .atten = ADC_ATTEN,
         .bitwidth = ADC_WIDTH,
     };
-    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_unit_handler, ADC_CHANNEL, &adc_channel));
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_unit_handler, ADC_CHANNEL,
+                                               &adc_channel));
 }
-void setup_inputPins(){
+void setup_inputPins() {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
-    io_conf.pin_bit_mask = 1ULL << GPIO_NUM_17 | 1ULL << GPIO_NUM_19 |1ULL << GPIO_NUM_23 |1ULL << GPIO_NUM_32 |1ULL << GPIO_NUM_33 ;
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
+    io_conf.pin_bit_mask = 1ULL << GPIO_NUM_17 | 1ULL << GPIO_NUM_19 |
+                           1ULL << GPIO_NUM_23 | 1ULL << GPIO_NUM_32 |
+                           1ULL << GPIO_NUM_33 | 1ULL << GPIO_NUM_18;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = 1ULL << GPIO_NUM_18;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
     gpio_config(&io_conf);
 }
 
-
-void setupPins(){
+void setupPins() {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
