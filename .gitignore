@@ -60,7 +60,7 @@ dkms.conf
 
 #Python flask
 .venv/
-
+.cache/
 *.pyc
 __pycache__/
 
