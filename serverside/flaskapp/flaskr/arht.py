@@ -70,7 +70,34 @@ def get_study_info(id_study):
         aux = cur.fetchall()
         df = pd.DataFrame(aux)
         df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
-        df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+        # df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+        df.drop(columns=['id_study'], inplace=True)
+        df.replace(0, np.nan, inplace=True)
+        cache.update({id_study:df.copy()})
+        cur.close()
+
+def get_study_info_range(id_study, start_datetime, end_datetime):
+    global studies_info
+    if id_study not in studies_info:
+        cur = mysql.connection.cursor()
+        cur.execute(f'''select * from studies where id_study={id_study}''')
+        aux = cur.fetchall()
+        if aux != None:
+            for row in aux:
+                studies_info[str(row[0])] = {'start_date':row[1].strftime('%Y-%m-%d %H:%M'),'end_date':row[2].strftime('%Y-%m-%d %H:%M'),'owner':row[3], 'status':row[4], 'email':row[5]}
+        
+        cur.execute(f'''SELECT room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study};''')
+        aux = cur.fetchall()
+        layout_cache[id_study] = {}
+        if aux != None:
+            for row in aux:
+                layout_cache[id_study][str(row[0])] = row[1:]
+
+        cur.execute(f'''select * from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}";''')
+        aux = cur.fetchall()
+        df = pd.DataFrame(aux)
+        df.columns = ['sens_time','room_name','id_study','TS1','HS1','TS2','HS2','TS3','HS3','TS4','HS4','TS5','HS5']
+        # df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
         df.drop(columns=['id_study'], inplace=True)
         df.replace(0, np.nan, inplace=True)
         cache.update({id_study:df.copy()})
@@ -188,14 +215,17 @@ def generate_hum_graph(id_study):
 
     return json.dumps(fig_hum, cls=plotly.utils.PlotlyJSONEncoder)
     
-def generate_heatmap_data(M, points, temperatures):
+def generate_heatmap_data(M, points, temperatures, jsonable=True):
     grid_x, grid_y = np.meshgrid(np.linspace(0, M-1, M), np.linspace(0, M-1, M))
     known_points = np.array(points)
     known_temperatures = np.array(temperatures)
     rbf = Rbf(known_points[:, 0], known_points[:, 1], known_temperatures, function='multiquadric')
     grid_temperatures = rbf(grid_x, grid_y)
     temperature_grid = grid_temperatures.reshape(M, M)
-    return temperature_grid
+    if jsonable:
+        return temperature_grid.tolist()
+    else:
+        return temperature_grid
 
 def generate_temp_graph_range(id_study, start_datetime, end_datetime):
     cur = mysql.connection.cursor()
@@ -322,6 +352,59 @@ def generate_hum_graph_range(id_study, start_datetime, end_datetime):
 
     return json.dumps(fig_hum, cls=plotly.utils.PlotlyJSONEncoder)
 
+def generate_heat_graph_range(id_study, start_datetime, end_datetime):
+    cur = mysql.connection.cursor()
+    cur.execute(f'''SELECT sens_time, room_name, temp_pin17, temp_pin19, temp_pin23, temp_pin32, temp_pin33 from measurements where id_study={id_study} and sens_time BETWEEN "{start_datetime}" and "{end_datetime}" ;''')
+    aux = cur.fetchall()
+    df = pd.DataFrame(aux)
+
+    cur.execute(f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
+    aux = cur.fetchall()
+    layouts = {}
+    if aux != None:
+        for row in aux:
+            layouts[str(row[0])] = row[1:]
+
+    cur.close()
+    dfs = []
+    points = get_points_from_layouts(layouts)
+    df.columns = ['sens_time','room_name','TS1','TS2','TS3','TS4','TS5']
+    df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+    df.replace(0, np.nan, inplace=True)
+    drop_time = False
+    new_cols = ['time']
+    #Creates the frame [time, point1, point2, point3, point4, point5] as columns
+    for layout in layouts:
+        for col in layouts[layout]:
+            new_cols.append(col)
+        df_aux = df[df['room_name'] == layout]
+        #drops humidity because we just care about temperature
+        if not drop_time:
+            df_aux.drop(columns=['room_name'], inplace=True)
+            #After first layout, drop time to not duplicate
+            drop_time = True
+        else:
+            df_aux.drop(columns=['sens_time','room_name'], inplace=True)
+        df_aux.reset_index(inplace=True, drop=True)
+        dfs.append(df_aux.copy())
+
+    # Assuming `df_test` contains the subset you want to display
+    df_merged = pd.concat(dfs, axis=1, join='outer')
+    df_merged.columns= new_cols
+    df_merged.interpolate(method='linear', limit_direction='forward', axis=0, inplace=True)
+    df_test = df_merged
+    # # Create heatmap figures for each snapshot and serialize them to JSON
+    temperatures_data = []
+    for index, snap in df_test.iterrows():
+        temperatures = list(snap.iloc[1:])
+        temps = generate_heatmap_data(M, points, temperatures)  # M = 21 for grid size
+        temperatures_data.append({
+            'time': snap['time'],  # Include timestamp
+            'temp_grid': temps,
+        })
+    
+    return json.dumps(temperatures_data)
+
 def generate_last_heatmap_from_cache(id_study, json_format=True):
     if id_study not in studies_info:
         return None
@@ -442,8 +525,12 @@ def generate_heatmap_sequence(id_study):
         dfs = []
 
         df = data.copy()
+        # df = df.between_date("")
+        # df['sens_time'] = pd.to_datetime(df['sens_time'], format="%Y-%m-%d %H:%M:%S")
+        # df = df[]
         drop_time = False
         new_cols = ['time']
+        #Creates the frame [time, point1, point2, point3, point4, point5] as columns
         for layout in layouts:
             for col in layouts[layout]:
                 new_cols.append(col)
@@ -478,7 +565,8 @@ def generate_heatmap_sequence(id_study):
 def load_cache(id_study, force_load=False):
     loaded = False
     if id_study not in studies_info:
-        get_study_info(id_study)
+        today = date.today().strftime("%Y-%m-%d")
+        get_study_info_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
 
     if id_study in studies_info:
         if id_study not in graphs_cache or force_load:
@@ -494,7 +582,6 @@ def load_cache(id_study, force_load=False):
 with app.app_context():
     pass
 
-
 @app.route('/')
 def login():
     return render_template('login.html')
@@ -508,7 +595,6 @@ def authenticate_hover():
         return jsonify({"status": "success", "data": id_study})
     else:
         return jsonify({"status": "error", "message": "Invalid study code"}), 400
-
 
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
@@ -539,10 +625,11 @@ def study_dashboard():
     hum_today = generate_hum_graph_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
     info = json.dumps(studies_info[id_study])
     layout = layout_cache[id_study]
-    heatmap_last = generate_last_heatmap_from_cache(id_study, json_format=True)
+    heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
+    heatmap_today = generate_heat_graph_range(id_study, (today + ' 00:00:00'),(today + ' 23:59:00'))
     # Pass the data to the study dashboard template
     study_data = studies_info[id_study]
-    return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last, humidity_graphJSON=hum_today, temp_graphJSON=temp_today)
+    return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last_snapshot, humidity_graphJSON=hum_today, temp_graphJSON=temp_today, heatmap_seq=heatmap_today)
 
 @app.route('/logout')
 def logout():

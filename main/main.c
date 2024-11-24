@@ -4,8 +4,6 @@ https://github.com/RzRaul/arht_project
 
 
 */
-
-
 #include "commands.h"
 #include "my_wifi.h"
 #include "web_server.h"

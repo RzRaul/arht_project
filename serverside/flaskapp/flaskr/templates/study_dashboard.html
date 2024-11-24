@@ -27,20 +27,21 @@
         <!-- Cards with stats -->
         <div class="stats-container">
             <div class="stat-card">
-                <h3>Average Temperature</h3>
-                <p id="avg-temp">25°C</p>
+                <h3>Current temperature</h3>
+                <p id="current-temp"></p>
             </div>
             <div class="stat-card">
-                <h3>Last Known Temperature</h3>
-                <p id="last-temp">23°C</p>
+                <h3>Highest temperature (Today)</h3>
+                <p id="highest-temp"></p>
             </div>
             <div class="stat-card">
-                <h3>Average Humidity</h3>
-                <p id="avg-humidity">60%</p>
+                <h3>Lowest temperature (Today)</h3>
+                <p id="lowest-temp"></p>
             </div>
+            
             <div class="stat-card">
-                <h3>Last Known Humidity</h3>
-                <p id="last-humidity">65%</p>
+                <h3>Lowest Humidity (Today)</h3>
+                <p id="lowest-humidity"></p>
             </div>
         </div>
 
@@ -65,9 +66,18 @@
                 </div>
             </div>
             <div class="graph-card">
-                <h3>Heatmap (Last Known Snapshot)</h3>
+                <div class="title-controller" id="temp_control_title">
+                    <h3>Heatmap (Last Known Snapshot)</h3>
+                    <input id="day-picker-heatmap" type="date" />
+                </div>
                 <div class="graph" id="heatmap-graph">
                     <!-- Heatmap will be here -->
+                </div>
+                <!-- Time Slider -->
+                <div class="slider-container">
+                    <label for="time-slider" class="slider-label">Time: <span id="time-label">0</span> hrs</label><br>
+                    <input type="range" id="time-slider" min="0" max="73" value="73" step="1">
+                    
                 </div>
             </div>
         </div>
@@ -79,20 +89,39 @@
         var temp_graph = {{temp_graphJSON | safe}};
         var hum_graph = {{humidity_graphJSON | safe}};
         var heat_graph = {{heat_graphJSON | safe}};
+        var heat_sequence = {{heatmap_seq | safe}};
         var study_data = {{study_dataJSON | safe}};
-        var full_heatmap_data = heat_graph;
+        var full_heatmap_data = heat_sequence;
         heat_graph.layout.yaxis.autorange = 'reversed';
+        const [min_temp, max_temp] = get_min_max(temp_graph.data);
+        const [min_hum, max_hum] = get_min_max(hum_graph.data);
+
         Plotly.plot('temp-graph', temp_graph.data, temp_graph.layout);
         Plotly.plot('humidity-graph', hum_graph.data, hum_graph.layout);
         Plotly.plot('heatmap-graph', heat_graph.data, heat_graph.layout);
+
         document.getElementById('names_dash').innerText = `${study_data.owner}'s Dashboard`;
-        document.getElementById('day-picker-temp').valueAsDate = new Date();
-        document.getElementById('day-picker-humidity').valueAsDate = new Date();
+        var localDate = (new Date()).toLocaleDateString('en-CA', { timeZone: 'America/Tijuana' });
+        document.getElementById('day-picker-temp').value = localDate;
+        document.getElementById('day-picker-humidity').value = localDate;
+        document.getElementById('day-picker-heatmap').value = localDate;
+        
+        document.getElementById('lowest-temp').innerHTML = min_temp + " °C";
+        document.getElementById('highest-temp').innerHTML = max_temp + " °C";
+        document.getElementById('lowest-humidity').innerHTML = min_hum + " %";
+        document.getElementById('current-temp').innerHTML = get_current_temp().toFixed(2)+" °C";
+
+        // Time Slider functionality
+        var slider = document.getElementById("time-slider");
+        var timeDisplay = document.getElementById("time-label");
+        slider.max = heat_sequence.length;
+        slider.value = heat_sequence.length-1;
+        timeDisplay.textContent = String(heat_sequence[heat_sequence.length-1].time).split(' ')[1] + " hrs"
 
             // Function to filter the heatmap data based on the date range
         function filterDataByDate() {
-            var fromDate = new Date(document.getElementById('from_date').value + 'T00:00:00'); // Set start time to 00:00:00
-            var tillDate = new Date(document.getElementById('till_date').value + 'T23:59:59'); // Set end time to 23:59:59
+            var fromDate = new Date(document.getElementById('day-picker-heatmap').value + 'T00:00:00'); // Set start time to 00:00:00
+            var tillDate = new Date(document.getElementById('day-picker-heatmap').value + 'T23:59:59'); // Set end time to 23:59:59
 
             // Filter the heatmap data based on the date range
             var filteredData = full_heatmap_data.filter(function(item) {
@@ -102,7 +131,31 @@
 
             return filteredData;
         }
+        function get_min_max(graph_data){
+            let data_min = Infinity;  // Initialize to a very large number
+            let data_max = -Infinity; // Initialize to a very small number
 
+            graph_data.forEach(element => {
+                // Find the min and max for the current y array using the spread operator
+                let sensorMin = Math.min(...element.y);
+                let sensorMax = Math.max(...element.y);
+
+                // Update global min and max across all data
+                data_min = Math.min(sensorMin, data_min);
+                data_max = Math.max(sensorMax, data_max);
+            });
+
+            return [data_min, data_max];
+        }
+
+        function get_current_temp(temp_data){
+            var flat_arr = heat_sequence[heat_sequence.length-1].temp_grid.flat();
+            return flat_arr.reduce((sum, currentValue) => sum + currentValue, 0) / flat_arr.length;
+        }
+        function updateHeatmap(snapshot) {
+            heat_graph.data[0].z = snapshot.temp_grid;
+            Plotly.newPlot('heatmap-graph', heat_graph.data, heat_graph.layout);
+        }
         // Function to update the slider range and heatmap based on filtered data
         function updateSliderAndHeatmap() {
             var filteredData = filterDataByDate();
@@ -115,14 +168,21 @@
 
                 // Update the heatmap with the first snapshot of the filtered data
                 updateHeatmap(filteredData[0]);
-                heat_graph = filteredData;
-                timeDisplay.textContent = filteredData[0].time;
+                slider.max = filteredData.length;
+                slider.value = filteredData[filteredData.length-1];
+                timeDisplay.textContent = String(filteredData[0].time).split(' ')[1] + " hrs";
+
             }
         }
 
         // Add event listeners to the date inputs to update the heatmap when the date range changes
-        // document.getElementById('from_date').addEventListener('change', updateSliderAndHeatmap);
-        // document.getElementById('till_date').addEventListener('change', updateSliderAndHeatmap);
+        document.getElementById('day-picker-heatmap').addEventListener('change', updateSliderAndHeatmap);
+        // Event listener for the slider to update the heatmap when the time changes
+        slider.addEventListener("input", function() {
+            var index = slider.value;
+            timeDisplay.textContent = String(heat_sequence[index].time).split(' ')[1] + " hrs";
+            updateHeatmap(heat_sequence[index]);
+        });
 
         //Media Queries
         function myFunction(x) {
@@ -132,7 +192,6 @@
                 hum_graph.layout.showlegend=false;
                 Plotly.newPlot("humidity-graph", hum_graph.data, hum_graph.layout);
                 heat_graph.data[0].showscale=false;
-                heat_graph.layout.
                 Plotly.newPlot("heatmap-graph", heat_graph.data, heat_graph.layout);
             } 
         }
@@ -145,8 +204,9 @@
 
         // Attach listener function on state changes
         x.addEventListener("change", function() {
-        myFunction(x);
+            myFunction(x);
         });
+        
     </script>
     <script>
         const themeToggle = document.getElementById('theme-toggle');
