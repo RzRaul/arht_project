@@ -78,6 +78,7 @@ void app_main(void) {
             WIFI_CONNECTED_BIT)) {
         ESP_LOGI(TAG, "Waiting for connection to the wifi network");
     }
+    // init_mDNS();
     xTaskCreate(&tcp_client_task, "tcp_client", 4096, (void *)deviceName, 5,
                 &orchestrator);
 }

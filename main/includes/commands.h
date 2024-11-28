@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "lwip/err.h"
 #include "lwip/sockets.h"
+#include "mdns.h"
 #include "nvs_flash.h"
 #include "resources.h"
 #include <string.h>
@@ -27,7 +28,6 @@
 #define DHT_PIN GPIO_NUM_32
 // Custom protocol symbols
 #define CMD_ASK_EMAIL "GET_INFO:"
-#define CMD_KEEP_ALIVE "UABC:" USER_ID ":K:S:KeepAliveCMD"
 #define KEEP_ALIVE_TIMEOUT 10
 #define NACK_RESPONSE "NACK"
 #define ACK_RESPONSE "ACK"
@@ -35,13 +35,13 @@
 // Util symbols
 #define BUFFER_SIZE 128
 #define PORT 8266
-#define PORT_UDP 8267
 
 #define DEBUG 1
 
 // #define SERVER_IP "82.180.173.228" //IoT server
 // #define SERVER_IP "201.142.138.246" //Home server
 #define SERVER_IP "192.168.1.200" // Local server
+#define SERVER_NAME "orangepi"    // Local server
 #define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS)
 
 #define SENSORS_PER_DEVICE 5
@@ -68,8 +68,11 @@ void udp_server_task(void *pvParameters);
 void print_sensors_pins();
 void setup_pins_pullups();
 void dht_read_data(float *measures);
+void init_mDNS();
 void periodic_send(int *sock);
 int process_command(char *command, int len);
 void tcp_client_task(void *pvParameters);
+static esp_err_t resolve_hostname(const char *hostname,
+                                  struct sockaddr_in *resolved_addr);
 
 #endif

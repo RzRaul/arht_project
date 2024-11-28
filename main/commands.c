@@ -1,4 +1,5 @@
 #include "commands.h"
+#include "esp_log.h"
 #include "lwip/sockets.h"
 #include "my_wifi.h"
 
@@ -30,6 +31,45 @@ void setup_pins_pullups() {
         gpio_set_pull_mode(dht_pins[i], GPIO_PULLUP_ONLY);
     }
 }
+
+void init_mDNS() {
+    esp_err_t err = mdns_init();
+    if (err != ESP_OK) {
+        ESP_LOGE("mDNS", "mDNS initialization failed: %s",
+                 esp_err_to_name(err));
+        return;
+    }
+
+    // Start the mDNS service
+    err = mdns_hostname_set("esp32");
+    if (err != ESP_OK) {
+        ESP_LOGE("mDNS", "Setting mDNS hostname failed: %s",
+                 esp_err_to_name(err));
+        return;
+    }
+
+    // Add the mDNS service for device discovery
+    err = mdns_service_add("esp32", "_http", "_tcp", 80, NULL, 0);
+    if (err != ESP_OK) {
+        ESP_LOGE("mDNS", "mDNS service adding failed: %s",
+                 esp_err_to_name(err));
+        return;
+    }
+}
+
+static esp_err_t resolve_hostname(const char *hostname,
+                                  struct sockaddr_in *resolved_addr) {
+    struct ip4_addr ip_addr;
+    ip_addr.addr = 0;
+    esp_err_t err = mdns_query_a(hostname, 5000, &ip_addr); // Timeout 2 seconds
+    if (err != ESP_OK) {
+        ESP_LOGE("mDNS", "Failed to resolve hostname %s", hostname);
+        return ESP_FAIL;
+    }
+
+    resolved_addr->sin_addr.s_addr = ip_addr.addr;
+    return ESP_OK;
+}
 void dht_read_data(float *measures) {
     ESP_LOGI(TAG_CMD, "DHT Sensors Readings");
     for (uint8_t i = 0; i < sizeof(dht_pins); i++) {
@@ -60,18 +100,23 @@ void dht_read_data(float *measures) {
 void tcp_client_task(void *pvParameters) {
     char rx_buffer[BUFFER_SIZE] = {0};
     char tx_buffer[BUFFER_SIZE] = {0};
-    char host_ip[] = SERVER_IP;
+    // char host_ip[] = SERVER_IP;
     int addr_family = 0;
     int ip_protocol = 0;
-
+    init_mDNS();
     while (1) {
+        const char *hostname = "orangepi";
         struct sockaddr_in dest_addr;
-        inet_pton(AF_INET, host_ip, &dest_addr.sin_addr);
+        // inet_pton(AF_INET, host_ip, &dest_addr.sin_addr);
         dest_addr.sin_family = AF_INET;
         dest_addr.sin_port = htons(PORT);
         addr_family = AF_INET;
         ip_protocol = IPPROTO_IP;
+        if (resolve_hostname(hostname, &dest_addr) != ESP_OK) {
+            ESP_LOGE("TCP", "Failed to resolve hostname %s", SERVER_NAME);
+        }
 
+        ESP_LOGI("hi", "in tcp task");
         int sock = socket(addr_family, SOCK_STREAM, ip_protocol);
 
         if (sock < 0) {
@@ -79,7 +124,8 @@ void tcp_client_task(void *pvParameters) {
             break;
         }
 
-        ESP_LOGI(TAG_TCP, "Socket created, connecting to %s:%d", host_ip, PORT);
+        ESP_LOGI(TAG_TCP, "Socket created, connecting to %s:%d", hostname,
+                 PORT);
 
         int err =
             connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
@@ -90,13 +136,12 @@ void tcp_client_task(void *pvParameters) {
 
         ESP_LOGI(TAG_TCP, "Successfully connected");
         // Asks for the email for the notification
-        strcat(tx_buffer, CMD_ASK_EMAIL);
-        strcat(tx_buffer, study_key);
-        send(sock, const void *dataptr, size_t size, int flags)
-            //  xTaskCreate(periodic_send, "keep_alive", 4096, &sock, 5,
-            //  &periodic_send_handle);
+        // strcat(tx_buffer,CMD_ASK_EMAIL);
+        // send(sock, const void *dataptr, size_t size, int flags)
+        //  xTaskCreate(periodic_send, "keep_alive", 4096, &sock, 5,
+        //  &periodic_send_handle);
 
-            while (1) {
+        while (1) {
             err = 0;
             bzero(rx_buffer, sizeof(rx_buffer));
             bzero(tx_buffer, sizeof(tx_buffer));
