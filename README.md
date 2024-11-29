@@ -48,7 +48,7 @@ And these are the connectors </br>
 ![image](https://github.com/user-attachments/assets/f5b3d895-4a3d-44a1-939a-f83288e0adcf)
 
 # Database model
-![image](https://github.com/user-attachments/assets/4dd80d9e-00d7-4659-8a65-0f7944ae78d6)
+![image](https://github.com/user-attachments/assets/620924e7-e06d-4f4d-b096-8ece9e5900c1)
 
 # Website stack
 For the website [Flask](https://flask.palletsprojects.com/en/stable/) will be used in order to take advantage of [Pandas](https://pandas.pydata.org/docs/) library 
