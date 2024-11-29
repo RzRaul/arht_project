@@ -150,6 +150,7 @@
 
         function get_current_temp(temp_data){
             var flat_arr = heat_sequence[heat_sequence.length-1].temp_grid.flat();
+            console.log(flat_arr);
             return flat_arr.reduce((sum, currentValue) => sum + currentValue, 0) / flat_arr.length;
         }
         function updateHeatmap(snapshot) {

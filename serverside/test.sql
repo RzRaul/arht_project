@@ -1,2 +1,0 @@
-ALTER TABLE arht_final.measurements
-RENAME temp_pin17
