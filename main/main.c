@@ -26,6 +26,7 @@ void init_power_management() {
         .min_freq_mhz = 80,
         .light_sleep_enable = true,
     };
+    esp_pm_configure(&pm_config);
 }
 
 void app_main(void) {
@@ -37,7 +38,6 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     if (!gpio_get_level(GPIO_ERASE_CREDENTIALS)) {
         // If started with button pressed delete NVS and credentials
-        ESP_LOGI("main", "Entered beacuse of the button");
         ESP_ERROR_CHECK(nvs_flash_erase());
     };
 
@@ -67,6 +67,7 @@ void app_main(void) {
         wifi_init_softap();
         ESP_LOGI(TAG, "Setup as AP initializing server...");
         server = start_webserver();
+        gpio_set_level(RESOURCE_LED, 1);
         // start_captative_portal(); //WIP
     } else {
         wifi_init_sta();
@@ -78,6 +79,7 @@ void app_main(void) {
             WIFI_CONNECTED_BIT)) {
         ESP_LOGI(TAG, "Waiting for connection to the wifi network");
     }
+    gpio_set_level(RESOURCE_LED, 0);
     xTaskCreate(&tcp_client_task, "tcp_client", 4096, (void *)deviceName, 5,
                 &orchestrator);
 }

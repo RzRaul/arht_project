@@ -1,3 +1,4 @@
+
 import socket
 import struct
 import threading
@@ -6,15 +7,37 @@ import random
 import mariadb
 
 # Constants
-HOST = '0.0.0.0'  # Localhost
-PORT = 8266         # Port to listen on (non-privileged ports are > 1023)
+HOST = 'localhost'  # Localhost
+PORT = 8266        # Port to listen on (non-privileged ports are > 1023)
 DATABASE = "arht_final"
 TABLE = "measurements"
 USER = "logger"
 PREPARED_STATEMENT = f"INSERT INTO {TABLE} (sens_time, temp_pin17, humidity_pin17, temp_pin19, humidity_pin19, temp_pin23, humidity_pin23, temp_pin32, humidity_pin32, temp_pin33, humidity_pin33, room_name, id_study) VALUES (DEFAULT,?,?,?,?,?,?,?,?,?,?,?,?)"
-TIMEOUT = 21 * 60  # 21 minutes in seconds
 
 # Function to handle client connections
+
+
+def ask_for_email(data):
+    try:
+        conn = mariadb.connect(
+            user=USER,
+            password="NotARHTPass",
+            host=HOST,
+            port=3306,
+            database=DATABASE
+        )
+    except mariadb.Error as e:
+        print(f"Error connecting to MariaDB Platform: {e}")
+        return
+    # Creates a cursor to interact with the database
+    cur = conn.cursor()
+    # Inserts data into the database
+    print(f"STMT -> {PREPARED_STATEMENT}\n")
+    cur.execute(PREPARED_STATEMENT, data)
+    # Commits the data
+    conn.commit()
+
+
 def insert_data(data):
     # Connects to the mariadb local database
     try:
@@ -50,13 +73,9 @@ def handle_client(conn, addr):
 
     while True:
         try:
-            # Set the socket timeout (21 minutes)
-            conn.settimeout(TIMEOUT)
-
             data = conn.recv(1024)
             if not data:
                 break
-            
             print(f"Received {len(data)} bytes")
             # Receives 10 floats 4 bytes each. Turns them into a list of floats and also max 32 bytes for name
             # and assigns it to device name
@@ -68,12 +87,8 @@ def handle_client(conn, addr):
             print(data)
             # inserts data into the database
             insert_data(data)
-            
-            # Update the last received time
-            last_received_time = time.time()
-
         except socket.timeout:
-            print(f"Timeout after {TIMEOUT // 60} minutes, closing connection.")
+            print("Timing out, closing connection.")
             break
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -83,8 +98,9 @@ def handle_client(conn, addr):
     # prints connection closed and the socket
     print(f"Connection closed by {addr}")
 
-
 # Main function to start the server
+
+
 def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))

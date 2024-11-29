@@ -14,7 +14,6 @@
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
-#include "resources.h"
 #include <string.h>
 
 #define COMMAND(X) (*X == 'R' || *X == 'W')
@@ -23,11 +22,18 @@
 #define COLONS ARGS - 1
 #define BUFF_LEN 254
 #define DHT_MAX_TRIES 5
+#define SENSOR_1 GPIO_NUM_17
+#define SENSOR_2 GPIO_NUM_19
+#define SENSOR_3 GPIO_NUM_23
+#define SENSOR_4 GPIO_NUM_32
+#define SENSOR_5 GPIO_NUM_33
+#define RST_BTN GPIO_NUM_18
+#define RESOURCE_LED GPIO_NUM_2
 
 #define DHT_PIN GPIO_NUM_32
 // Custom protocol symbols
 #define CMD_ASK_EMAIL "GET_INFO:"
-#define CMD_KEEP_ALIVE "UABC:" USER_ID ":K:S:KeepAliveCMD"
+#define CMD_KEEP_ALIVE "KeepAliveCMD"
 #define KEEP_ALIVE_TIMEOUT 10
 #define NACK_RESPONSE "NACK"
 #define ACK_RESPONSE "ACK"
@@ -67,6 +73,7 @@ typedef enum {
 void udp_server_task(void *pvParameters);
 void print_sensors_pins();
 void setup_pins_pullups();
+void setup_inputPins();
 void dht_read_data(float *measures);
 void periodic_send(int *sock);
 int process_command(char *command, int len);

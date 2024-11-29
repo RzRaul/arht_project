@@ -11,10 +11,10 @@ from scipy.interpolate import Rbf
 
 app = Flask(__name__)
 app.secret_key = 'esp32_project_arht'  # Used for session management
-app.config['MYSQL_HOST'] = '192.168.1.200'
+app.config['MYSQL_HOST'] = 'orangepi'
 app.config['MYSQL_USER'] = 'lurker'
 app.config['MYSQL_PASSWORD'] = 'LurkPass1'
-app.config['MYSQL_DB'] = 'arht_prod'
+app.config['MYSQL_DB'] = 'arht_final'
 # https://mysqlclient.readthedocs.io/user_guide.html#functions-and-attributes
 app.config["MYSQL_CUSTOM_OPTIONS"] = {"ssl_mode": 'DISABLED', "ssl": False}
 PLOT_COLOR = 'rgba(0,0,0,0)'
@@ -26,6 +26,7 @@ heatmap_cache = {}
 studies_info = {}
 layout_cache = {}
 graphs_cache = {}
+serialized_cache = {}
 M = 21
 
 
@@ -56,34 +57,36 @@ def get_all_study_info():
 
 
 def get_study_info(id_study):
-    global studies_info
+    global studies_info, layout_cache, cache 
     if id_study not in studies_info:
         cur = mysql.connection.cursor()
-        cur.execute(f'''select * from studies where id_study={id_study}''')
+        cur.execute(f"select * from studies where id_study={id_study}")
         aux = cur.fetchall()
         if aux != None:
             for row in aux:
                 studies_info[str(row[0])] = {'start_date': row[1].strftime(
                     '%Y-%m-%d %H:%M'), 'end_date': row[2].strftime('%Y-%m-%d %H:%M'), 'owner': row[3], 'status': row[4], 'email': row[5]}
 
-        cur.execute(
-            f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
-        aux = cur.fetchall()
-        layout_cache[id_study] = {}
-        if aux != None:
-            for row in aux:
-                layout_cache[id_study][str(row[0])] = row[1:]
+            cur.execute(
+                f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
+            aux = cur.fetchall()
+            layout_cache[id_study] = {}
+            if aux != None:
+                for row in aux:
+                    layout_cache[id_study][str(row[0])] = row[1:]
 
-        cur.execute(
-            f'''select * from measurements where id_study={id_study}''')
-        aux = cur.fetchall()
-        df = pd.DataFrame(aux)
-        df.columns = ['sens_time', 'room_name', 'id_study', 'TS1',
-                      'HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
-        # df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
-        df.drop(columns=['id_study'], inplace=True)
-        df.replace(0, np.nan, inplace=True)
-        cache.update({id_study: df.copy()})
+            cur.execute(
+                f'''select * from measurements where id_study={id_study}''')
+            aux = cur.fetchall()
+            df = pd.DataFrame(aux)
+            df.columns = ['sens_time', 'room_name', 'id_study', 'TS1','HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
+            df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+            df.drop(columns=['id_study'], inplace=True)
+            df.replace(0, np.nan, inplace=True)
+            df.interpolate(method='quadratic', limit_direction='forward', axis=0, inplace=True)
+            df.ffill();
+            cache.update({id_study: df.copy()})
+
         cur.close()
 
 
@@ -238,8 +241,9 @@ def generate_heatmap_data(M, points, temperatures, jsonable=True):
         np.linspace(0, M-1, M), np.linspace(0, M-1, M))
     known_points = np.array(points)
     known_temperatures = np.array(temperatures)
+    # print(f'known temps->{known_temperatures}')
     rbf = Rbf(known_points[:, 0], known_points[:, 1],
-              known_temperatures, function='multiquadric')
+              known_temperatures, function='multiquadric', smooth=0.0001)
     grid_temperatures = rbf(grid_x, grid_y)
     temperature_grid = grid_temperatures.reshape(M, M)
     if jsonable:
@@ -472,6 +476,8 @@ def generate_last_heatmap_from_cache(id_study, json_format=True):
     figure.update_layout(
         title='Temperature Distribution',
         xaxis_title='X Coordinate',
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
         yaxis_title='Y Coordinate',
         coloraxis=dict(cmin=10, cmax=30),
         margin=go.layout.Margin(
@@ -582,11 +588,12 @@ def generate_heatmap_sequence(id_study):
             df_aux.reset_index(inplace=True, drop=True)
             dfs.append(df_aux.copy())
 
-        # Assuming `df_test` contains the subset you want to display
+        
         df_merged = pd.concat(dfs, axis=1, join='outer')
         df_merged.columns = new_cols
         df_merged.interpolate(
-            method='linear', limit_direction='forward', axis=0, inplace=True)
+            method='quadratic', limit_direction='forward', axis=0, inplace=True)
+        # df_merged.fillna(method='ffill', axis=1, inplace=True)
         df_test = df_merged
         # # Create heatmap figures for each snapshot and serialize them to JSON
         temperatures_data = []
@@ -605,9 +612,7 @@ def generate_heatmap_sequence(id_study):
 def load_cache(id_study, force_load=False):
     loaded = False
     if id_study not in studies_info:
-        today = date.today().strftime("%Y-%m-%d")
-        get_study_info_range(
-            id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
+        get_study_info(id_study)
 
     if id_study in studies_info:
         if id_study not in graphs_cache or force_load:
@@ -625,8 +630,30 @@ def load_cache(id_study, force_load=False):
 
 
 with app.app_context():
-    pass
+    cur = mysql.connection.cursor()
+    cur.execute(
+        '''SELECT id_study, start_date, end_date, status FROM studies''')
+    data = cur.fetchall()
+    
+    cur.close()
+    for study in data:
+        id_study = str(study[0])
+        load_cache(id_study)
+    #     if('IN PROGRESS' in study[3]):
+    #         today = date.today().strftime("%Y-%m-%d")
+    #         cache[id_study] = {}
+    #         cache[id_study].update({'temp':generate_temp_graph_range(id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))})
+    #         cache[id_study].update({'hum':generate_hum_graph_range(id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))})
+    #         cache[id_study].update({'heat':generate_temp_graph_range(id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))})
+    #         info = json.dumps(studies_info[id_study])
+    #         layout = layout_cache[id_study]
+    #         heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
+    #         heatmap_today = generate_heat_graph_range(id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
+       
+    #    generate_heat_graph_range(data[0],str(data[1]), data )
+        
 
+    
 
 @app.route('/')
 def login():
@@ -647,7 +674,7 @@ def authenticate_hover():
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
     id_study = request.form.get('study_code')
-    if load_cache(id_study):
+    if id_study in cache:
         session['id_study'] = id_study
         return redirect(url_for('study_dashboard'))
     else:
@@ -670,15 +697,12 @@ def study_dashboard():
         # load_cache(id_study, force_load=True)
 
     today = date.today().strftime("%Y-%m-%d")
-    temp_today = generate_temp_graph_range(
-        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
-    hum_today = generate_hum_graph_range(
-        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
+    temp_today = graphs_cache[id_study]['temp']
+    hum_today =  graphs_cache[id_study]['hum']
     info = json.dumps(studies_info[id_study])
     layout = layout_cache[id_study]
     heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
-    heatmap_today = generate_heat_graph_range(
-        id_study, (today + ' 00:00:00'), (today + ' 23:59:00'))
+    heatmap_today = json.dumps(heatmap_cache[id_study])
     # Pass the data to the study dashboard template
     study_data = studies_info[id_study]
     return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last_snapshot, humidity_graphJSON=hum_today, temp_graphJSON=temp_today, heatmap_seq=heatmap_today)

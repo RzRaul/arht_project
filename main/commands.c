@@ -25,10 +25,34 @@ void print_sensors_pins() {
     }
 }
 void setup_pins_pullups() {
-
     for (uint8_t i = 0; i < sizeof(dht_pins); i++) {
         gpio_set_pull_mode(dht_pins[i], GPIO_PULLUP_ONLY);
     }
+}
+void setup_inputPins() {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
+    io_conf.pin_bit_mask = 1ULL << SENSOR_1 | 1ULL << SENSOR_2 |
+                           1ULL << SENSOR_3 | 1ULL << SENSOR_4 |
+                           1ULL << SENSOR_5;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = 1ULL << RST_BTN;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
+    io_conf.pin_bit_mask = 1ULL << RESOURCE_LED;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 0;
+    gpio_config(&io_conf);
 }
 void dht_read_data(float *measures) {
     ESP_LOGI(TAG_CMD, "DHT Sensors Readings");
@@ -52,13 +76,13 @@ void dht_read_data(float *measures) {
             failure_counts[i] = 0;
         }
 
-        // ESP_LOGI(TAG_CMD,"Reading from pin %d - Temp:%.2f - Hum:%.2f %%",
-        // dht_pins[i], getTemperature(), getHumidity());
+        ESP_LOGI(TAG_CMD,"Reading from pin %d - Temp:%.2f - Hum:%.2f %%",
+        dht_pins[i], getTemperature(), getHumidity());
     }
 }
 
 void tcp_client_task(void *pvParameters) {
-    char rx_buffer[BUFFER_SIZE] = {0};
+    // char rx_buffer[BUFFER_SIZE] = {0};
     char tx_buffer[BUFFER_SIZE] = {0};
     char host_ip[] = SERVER_IP;
     int addr_family = 0;
@@ -90,15 +114,15 @@ void tcp_client_task(void *pvParameters) {
 
         ESP_LOGI(TAG_TCP, "Successfully connected");
         // Asks for the email for the notification
-        strcat(tx_buffer, CMD_ASK_EMAIL);
-        strcat(tx_buffer, study_key);
-        send(sock, const void *dataptr, size_t size, int flags)
+        // strcat(tx_buffer, CMD_ASK_EMAIL);
+        // strcat(tx_buffer, study_key);
+        // send(sock, const void *dataptr, size_t size, int flags)
             //  xTaskCreate(periodic_send, "keep_alive", 4096, &sock, 5,
             //  &periodic_send_handle);
 
             while (1) {
             err = 0;
-            bzero(rx_buffer, sizeof(rx_buffer));
+            // bzero(rx_buffer, sizeof(rx_buffer));
             bzero(tx_buffer, sizeof(tx_buffer));
             dht_read_data(measures);
             memcpy(tx_buffer, measures, sizeof(measures));
