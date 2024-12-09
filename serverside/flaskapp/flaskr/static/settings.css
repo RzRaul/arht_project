@@ -1,0 +1,348 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+/* Header */
+header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 2rem;
+    color: #0066cc;
+}
+
+header #owner-name {
+    color: #0055a5;
+}
+
+/* Navigation */
+nav {
+    width: 100%;
+    background-color: #0066cc;
+    padding: 10px 0;
+    margin-bottom: 50px;
+}
+
+nav ul {
+    display: flex;
+    justify-content: center;
+    list-style-type: none;
+}
+
+nav ul li {
+    margin: 0 15px;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.3s;
+}
+
+nav ul li a:hover {
+    color: #ffcc00;
+}
+
+/* Layouts Section */
+.layouts-section {
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
+}
+
+.layouts-section h2 {
+    font-size: 1.5rem;
+}
+
+.layouts {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.layout-item {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.layout-item h3 {
+    font-size: 1.2rem;
+    color: #0066cc;
+    margin-bottom: 10px;
+}
+
+.layout-item p {
+    font-size: 1rem;
+    color: #333;
+}
+
+/* Add Layout Section */
+.add-layout-section {
+    width: 100%;
+    max-width: 800px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-layout-section h2 {
+    font-size: 1.5rem;
+    color: #0066cc;
+    margin-bottom: 20px;
+}
+
+.add-layout-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.input-group, .sensor-input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+input[type="text"] {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 12px;
+    font-size: 1.2rem;
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0055a5;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    .layouts-section, .add-layout-section {
+        width: 100%;
+        max-width: none;
+        padding: 15px;
+    }
+
+    .layout-item {
+        padding: 10px;
+    }
+}
+
+/* Room Layout Styles */
+.room-layout {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border: 1px solid #ddd;
+    background-color: #f0f0f0;
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.sensor-marker {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: #0066cc;
+    border-radius: 50%;
+    transform: translate(-50%, -50%); /* Center the marker on the coordinate */
+}
+
+/* Styling for existing sensors */
+#existing-sensor-1 {
+    background-color: #ff6347; /* Different color for existing sensor */
+}
+
+#existing-sensor-2 {
+    background-color: #ff6347;
+}
+
+#existing-sensor-3 {
+    background-color: #ff6347;
+}
+
+#existing-sensor-4 {
+    background-color: #ff6347;
+}
+
+#existing-sensor-5 {
+    background-color: #ff6347;
+}
+
+/* Optional: Add a grid to the room layout for better visual reference */
+.room-layout::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(to right, #ddd 1px, transparent 1px), linear-gradient(to bottom, #ddd 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.study-container {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.2rem;
+}
+
+.study-container > p{
+    margin-bottom: 10px;
+}
+
+/* Layouts Section */
+.layouts-section {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+.top-section {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.room-layout {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border: 1px solid #ddd;
+    background-color: #f0f0f0;
+    margin: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.room-layout > h3 {
+    margin-top: -30px;
+}
+
+.sensor-marker {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: #0066cc;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Styling for existing sensors */
+.existing-sensor {
+    background-color: #ff6347;
+}
+
+/* Optional: Add a grid to the room layout for better visual reference */
+.room-layout::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(to right, #ddd 1px, transparent 1px), linear-gradient(to bottom, #ddd 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+/* Add Layout Form Section */
+.add-layout-section {
+    text-align: center;
+}
+
+.add-layout-section {
+    text-align: center;
+}
+
+.add-layout-section form {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-group input,
+.sensor-input input {
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.sensor-input {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.sensor-input > label {
+    
+    margin-top: -10px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    background-color: #0066cc;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0055a5;
+}
+

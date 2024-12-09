@@ -1,6 +1,7 @@
 #include "commands.h"
 #include "lwip/sockets.h"
 #include "my_wifi.h"
+#include "my_SMTP.h"
 
 static const char *TAG_TCP = "TCP";
 static const char *TAG_CMD = "CMD";
@@ -13,6 +14,8 @@ static int connected_to_wifi = 0;
 int power_saving_mode = 0;
 uint8_t dht_pins[SENSORS_PER_DEVICE] = {GPIO_NUM_17, GPIO_NUM_19, GPIO_NUM_23,
                                         GPIO_NUM_32, GPIO_NUM_33};
+
+
 TaskHandle_t periodic_send_handle = NULL;
 float measures[SENSORS_PER_DEVICE * PARAMETERS_PER_SENSOR] = {0};
 uint8_t failure_counts[SENSORS_PER_DEVICE] = {0};
@@ -120,7 +123,7 @@ void tcp_client_task(void *pvParameters) {
             //  xTaskCreate(periodic_send, "keep_alive", 4096, &sock, 5,
             //  &periodic_send_handle);
 
-            while (1) {
+        while (1) {
             err = 0;
             // bzero(rx_buffer, sizeof(rx_buffer));
             bzero(tx_buffer, sizeof(tx_buffer));
@@ -137,13 +140,32 @@ void tcp_client_task(void *pvParameters) {
                 ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d",
                          errno);
                 break;
-            }
+            } 
+            uint8_t send_mail = false;
+            tx_buffer[0] = '\0';
+            char sensor_msg_aux[40] = {0};
             for (int i = 0; i < SENSORS_PER_DEVICE; i++) {
+               
+                
                 if (failure_counts[i] >= 3) {
-                    ESP_LOGE(TAG_TCP, "Error on pin %d", dht_pins[i]);
-                    memset(failure_counts, 0, sizeof(failure_counts));
+                    ESP_LOGE(TAG_TCP, "Error on sensor_%d", i+1);
+                    snprintf(sensor_msg_aux, 40, "Error on sensor_%d (%d time(s))\n", i+1, failure_counts[i]);
+                    strcat(tx_buffer,sensor_msg_aux);
+                    failure_counts[i] = 0;
+                    send_mail = true;
+                    // memset(failure_counts, 0, sizeof(failure_counts));
+                }else if (failure_counts[i]>0){
+                    snprintf(sensor_msg_aux, 40, "Error on sensor_%d (%d time(s))\n", i+1, failure_counts[i]);
+                    strcat(tx_buffer,sensor_msg_aux);
                 }
+                
             }
+            ESP_LOGI("debug","Msg->%s", tx_buffer);
+            if (send_mail){
+                    ESP_LOGW("tag","Sending Email msg");
+                    smtp_client_task(tx_buffer);
+                    send_mail = false;
+                }
             vTaskDelay(MEASURES_SAMPLING_TIME);
         }
         if (sock != -1) {

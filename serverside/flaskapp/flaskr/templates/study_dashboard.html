@@ -16,8 +16,9 @@
                 <h1 id="names_dash">Study Name</h1></a>
             </div>
             <div class="navbar-links">
+                <button id="go-settings" class="settings-btn">⚙</button>
                 <button class="theme-toggle" id="theme-toggle">🌙</button>
-                <button class="logout-btn">Logout</button>
+                <button class="logout-btn"><a href="/logout">Logout</a></button>
             </div>
         </div>
     </nav>
@@ -211,7 +212,12 @@
     </script>
     <script>
         const themeToggle = document.getElementById('theme-toggle');
+        const go_settings = document.getElementById('go-settings');
         const body = document.body;
+
+        go_settings.addEventListener('click', ()=>{
+            window.location.href = '/settings';
+        });
 
         themeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-theme');

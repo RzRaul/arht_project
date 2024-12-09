@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Layout and Settings</title>
+    <style>
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+            position: relative;
+            color: #333;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #0066cc;
+        }
+
+        .container {
+            width: 80%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .owner-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        /* Layouts Section */
+        .layouts-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .room-layout {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .sensor-marker {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background-color: #0066cc;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Styling for existing sensors */
+        .existing-sensor {
+            background-color: #ff6347;
+        }
+
+        /* Optional: Add a grid to the room layout for better visual reference */
+        .room-layout::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(to right, #ddd 1px, transparent 1px), linear-gradient(to bottom, #ddd 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+        }
+
+        /* Add Layout Form Section */
+        .add-layout-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .add-layout-section form {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group input,
+        .sensor-input input {
+            padding: 8px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 200px;
+        }
+
+        .sensor-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            background-color: #0066cc;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0055a5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header with Owner Information -->
+    <div class="header">
+        <h1>Welcome to Room Layout</h1>
+    </div>
+    <div class="owner-info">
+        <h2 id="owner-name"></h2>
+        <p id="owner-email"></p>
+        <p id="owner-phone"></p>
+    </div>
+
+    <!-- Layouts Section -->
+    <div class="layouts-section" id="layouts-section">
+        <!-- Layouts will be dynamically inserted here -->
+    </div>
+
+    <!-- Add New Layout Section -->
+    <section class="add-layout-section">
+        <h2>Add New Layout</h2>
+        <form id="add-layout-form">
+            <div class="input-group">
+                <label for="room-name">Room Name:</label>
+                <input type="text" id="room-name" name="room-name" placeholder="Enter Room Name" required>
+            </div>
+
+            <div class="sensor-input-group">
+                <h3>Sensor Coordinates:</h3>
+
+                <div class="sensor-input">
+                    <label for="sensor-1">Sensor 1 (x,y):</label>
+                    <input type="text" id="sensor-1" name="sensor-1" placeholder="x,y (e.g., 4,4)" required>
+                </div>
+                <div class="sensor-input">
+                    <label for="sensor-2">Sensor 2 (x,y):</label>
+                    <input type="text" id="sensor-2" name="sensor-2" placeholder="x,y (e.g., 7,7)" required>
+                </div>
+                <div class="sensor-input">
+                    <label for="sensor-3">Sensor 3 (x,y):</label>
+                    <input type="text" id="sensor-3" name="sensor-3" placeholder="x,y (e.g., 3,5)" required>
+                </div>
+                <div class="sensor-input">
+                    <label for="sensor-4">Sensor 4 (x,y):</label>
+                    <input type="text" id="sensor-4" name="sensor-4" placeholder="x,y (e.g., 4,5)" required>
+                </div>
+                <div class="sensor-input">
+                    <label for="sensor-5">Sensor 5 (x,y):</label>
+                    <input type="text" id="sensor-5" name="sensor-5" placeholder="x,y (e.g., 0,4)" required>
+                </div>
+            </div>
+
+            <button type="submit">Save Layout</button>
+        </form>
+    </section>
+</div>
+
+<script>
+    // Simulate receiving two JSON objects
+    const ownerInfo = {
+        "ownerName": "John Doe",
+        "email": "john.doe@example.com",
+        "phone": "+1234567890"
+    };
+
+    const layoutsData = {
+        "layouts": [
+            {
+                "roomName": "Bedroom",
+                "sensors": {
+                    "sensor1": { "x": 4, "y": 4 },
+                    "sensor2": { "x": 7, "y": 7 },
+                    "sensor3": { "x": 3, "y": 5 },
+                    "sensor4": { "x": 4, "y": 5 },
+                    "sensor5": { "x": 0, "y": 4 }
+                }
+            },
+            {
+                "roomName": "Living Room",
+                "sensors": {
+                    "sensor1": { "x": 20, "y": 5 },
+                    "sensor2": { "x": 20, "y": 15 },
+                    "sensor3": { "x": 13, "y": 10 },
+                    "sensor4": { "x": 20, "y": 10 },
+                    "sensor5": { "x": 10, "y": 0 }
+                }
+            }
+        ]
+    };
+
+    // Display Owner Information
+    document.getElementById('owner-name').textContent = ownerInfo.ownerName;
+    document.getElementById('owner-email').textContent = `Email: ${ownerInfo.email}`;
+    document.getElementById('owner-phone').textContent = `Phone: ${ownerInfo.phone}`;
+
+    // Function to render layouts
+    function renderLayouts(layouts) {
+        const layoutsSection = document.getElementById('layouts-section');
+        layoutsSection.innerHTML = '';  // Clear existing layouts
+
+        layouts.forEach(layout => {
+            const layoutDiv = document.createElement('div');
+            layoutDiv.classList.add('room-layout');
+            layoutDiv.innerHTML = `<h3>${layout.roomName}</h3>`;
+
+            // Render sensor markers
+            Object.values(layout.sensors).forEach(sensor => {
+                const sensorMarker = document.createElement('div');
+                sensorMarker.classList.add('sensor-marker', 'existing-sensor');
+                const x = sensor.x * 100 / 21;
+                const y = sensor.y * 100 / 21;
+                sensorMarker.style.left = `${x}%`;
+                sensorMarker.style.top = `${y}%`;
+
+                layoutDiv.appendChild(sensorMarker);
+            });
+
+            layoutsSection.appendChild(layoutDiv);
+        });
+    }
+
+    // Initial render of layouts
+    renderLayouts(layoutsData.layouts);
+</script>
+
+</body>
+</html>

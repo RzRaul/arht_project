@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from flask import Flask, request, render_template, Flask, jsonify, url_for, redirect, session
 from flask_mysqldb import MySQL
 import pandas as pd
@@ -8,6 +8,11 @@ import plotly
 import plotly.express as px
 import plotly.graph_objects as go
 from scipy.interpolate import Rbf
+
+INVALID_ID = -1
+EMPTY_LAYOUTS = 1
+EMPTY_MEASUREMENTS = 2
+OK_STUDY = 0
 
 app = Flask(__name__)
 app.secret_key = 'esp32_project_arht'  # Used for session management
@@ -19,6 +24,7 @@ app.config['MYSQL_DB'] = 'arht_final'
 app.config["MYSQL_CUSTOM_OPTIONS"] = {"ssl_mode": 'DISABLED', "ssl": False}
 PLOT_COLOR = 'rgba(0,0,0,0)'
 PLOT_PAPER_COLOR = 'rgba(0,0,0,0)'
+date_format = '%Y-%m-%d'
 mysql = MySQL(app)
 
 cache = {}
@@ -56,38 +62,56 @@ def get_all_study_info():
     cur.close()
 
 
-def get_study_info(id_study):
+def get_study_info(id_study, forced=False):
     global studies_info, layout_cache, cache 
-    if id_study not in studies_info:
+    if id_study not in studies_info or forced == True:
         cur = mysql.connection.cursor()
         cur.execute(f"select * from studies where id_study={id_study}")
         aux = cur.fetchall()
-        if aux != None:
-            for row in aux:
-                studies_info[str(row[0])] = {'start_date': row[1].strftime(
-                    '%Y-%m-%d %H:%M'), 'end_date': row[2].strftime('%Y-%m-%d %H:%M'), 'owner': row[3], 'status': row[4], 'email': row[5]}
+        if aux == ():
+            cur.close()
+            return INVALID_ID
+        
+        for row in aux:
+            studies_info[str(row[0])] = {'start_date': row[1].strftime(
+                '%Y-%m-%d %H:%M'), 'end_date': row[2].strftime('%Y-%m-%d %H:%M'), 'owner': row[3], 'status': row[4], 'email': row[5]}
 
-            cur.execute(
-                f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
-            aux = cur.fetchall()
-            layout_cache[id_study] = {}
-            if aux != None:
-                for row in aux:
-                    layout_cache[id_study][str(row[0])] = row[1:]
+        cur.execute(
+            f'''select room_name, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5 from layouts where id_study={id_study}''')
+        aux = cur.fetchall()
+        layout_cache[id_study] = {}
+        if aux == ():
+            cur.close()
+            return EMPTY_LAYOUTS
+            
+        for row in aux:
+            layout_cache[id_study][str(row[0])] = row[1:]
+            
+        cur.execute(
+            f'''select * from measurements where id_study={id_study}''')
+        aux = cur.fetchall()
+        if aux == ():
+            cur.close()
+            return EMPTY_MEASUREMENTS
+        
+        df = pd.DataFrame(aux)
+        df.columns = ['sens_time', 'room_name', 'id_study', 'TS1','HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
+        df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
+        df.drop(columns=['id_study'], inplace=True)
+        df.replace(0, np.nan, inplace=True)
+        df.interpolate(method='quadratic', limit_direction='forward', axis=0, inplace=True)
+        df.ffill();
+        cache.update({id_study: df.copy()})
+       
+    cur.close()
+        
+    return OK_STUDY
 
-            cur.execute(
-                f'''select * from measurements where id_study={id_study}''')
-            aux = cur.fetchall()
-            df = pd.DataFrame(aux)
-            df.columns = ['sens_time', 'room_name', 'id_study', 'TS1','HS1', 'TS2', 'HS2', 'TS3', 'HS3', 'TS4', 'HS4', 'TS5', 'HS5']
-            df['sens_time'] = df['sens_time'].dt.strftime('%Y-%m-%d %H:%M')
-            df.drop(columns=['id_study'], inplace=True)
-            df.replace(0, np.nan, inplace=True)
-            df.interpolate(method='quadratic', limit_direction='forward', axis=0, inplace=True)
-            df.ffill();
-            cache.update({id_study: df.copy()})
-
-        cur.close()
+def remove_from_cache(id_study):
+    id_study = str(id_study)
+    studies_info.pop(id_study, None)
+    layout_cache.pop(id_study, None)
+    cache.pop(id_study, None)
 
 
 def get_study_info_range(id_study, start_datetime, end_datetime):
@@ -441,6 +465,7 @@ def generate_heat_graph_range(id_study, start_datetime, end_datetime):
 def generate_last_heatmap_from_cache(id_study, json_format=True):
     if id_study not in studies_info:
         return None
+    print(f"layout->{layout_cache[id_study]} heatmap->{heatmap_cache[id_study]}")
     known_points = np.array(get_points_from_layouts(layout_cache[id_study]))
     temperatures = heatmap_cache[id_study]
     temperatures = temperatures[-1]
@@ -565,7 +590,7 @@ def generate_heatmap_sequence(id_study):
         points = get_points_from_layouts(layouts)
         dfs = []
 
-        df = data.copy()
+        df = data
         # df = df.between_date("")
         # df['sens_time'] = pd.to_datetime(df['sens_time'], format="%Y-%m-%d %H:%M:%S")
         # df = df[]
@@ -576,6 +601,7 @@ def generate_heatmap_sequence(id_study):
             for col in layouts[layout]:
                 new_cols.append(col)
             df_aux = df[df['room_name'] == layout]
+            
             # drops humidity because we just care about temperature
             if not drop_time:
                 df_aux.drop(columns=['room_name', 'HS1',
@@ -586,9 +612,8 @@ def generate_heatmap_sequence(id_study):
                 df_aux.drop(columns=['sens_time', 'room_name',
                             'HS1', 'HS2', 'HS3', 'HS4', 'HS5'], inplace=True)
             df_aux.reset_index(inplace=True, drop=True)
-            dfs.append(df_aux.copy())
+            dfs.append(df_aux)
 
-        
         df_merged = pd.concat(dfs, axis=1, join='outer')
         df_merged.columns = new_cols
         df_merged.interpolate(
@@ -610,11 +635,10 @@ def generate_heatmap_sequence(id_study):
 
 
 def load_cache(id_study, force_load=False):
-    loaded = False
-    if id_study not in studies_info:
-        get_study_info(id_study)
+    study_state = get_study_info(id_study, forced=force_load)
+    print(f"id_study->{id_study} study_state->{study_state}\n")
 
-    if id_study in studies_info:
+    if study_state == OK_STUDY and id_study in studies_info:
         if id_study not in graphs_cache or force_load:
             graphs_cache.update({id_study: {}})
             graphs_cache[id_study].update(
@@ -624,15 +648,14 @@ def load_cache(id_study, force_load=False):
         if id_study not in heatmap_cache or force_load:
             heatmap_cache.update(
                 {id_study: generate_heatmap_sequence(id_study)})
-        loaded = True
-
-    return loaded
+        
+    return study_state
 
 
 with app.app_context():
     cur = mysql.connection.cursor()
     cur.execute(
-        '''SELECT id_study, start_date, end_date, status FROM studies''')
+        '''select studies.id_study FROM studies INNER JOIN measurements as m ON studies.id_study = m.id_study INNER JOIN layouts ON layouts.id_study = studies.id_study group by studies.id_study;''')
     data = cur.fetchall()
     
     cur.close()
@@ -653,12 +676,20 @@ with app.app_context():
     #    generate_heat_graph_range(data[0],str(data[1]), data )
         
 
-    
 
 @app.route('/')
 def login():
     return render_template('login.html')
 
+
+@app.route('/error')
+def unexpected_error():
+    return render_template('error.html')
+
+@app.route('/no_data_yet')
+def no_data_yet():
+
+    return render_template('no_data_yet.html') 
 
 @app.route('/authenticate_hover', methods=['POST'])
 def authenticate_hover():
@@ -674,12 +705,24 @@ def authenticate_hover():
 @app.route('/authenticate', methods=['POST'])
 def authenticate():
     id_study = request.form.get('study_code')
-    if id_study in cache:
+    if id_study in cache and layout_cache[id_study] is not None:
+        session['id_study'] = id_study
+        return redirect(url_for('study_dashboard'))
+    
+    study_state = load_cache(id_study, force_load=True)
+    if study_state == INVALID_ID:
+        return render_template('login.html', error="Invalid study code")
+    elif study_state == EMPTY_LAYOUTS:
+        session['id_study'] = id_study
+        return redirect(url_for('settings'))
+    elif study_state == EMPTY_MEASUREMENTS:
+        session['id_study'] = id_study
+        return redirect(url_for('no_data_yet'))
+    elif study_state == OK_STUDY:
         session['id_study'] = id_study
         return redirect(url_for('study_dashboard'))
     else:
-        # Invalid code
-        return render_template('login.html', error="Invalid study code")
+        return redirect(url_for('error'))
 
 
 @app.route('/study_dashboard')
@@ -690,22 +733,27 @@ def study_dashboard():
     # Get study code from session
     id_study = session['id_study']
 
-    # If the study data is not in cache, load it (for demo purposes, we're simulating this)
-    if id_study not in cache:
-        # Here you would load the study data (e.g., from a database or external API)
-        print("Not in cache ->\n")
-        # load_cache(id_study, force_load=True)
-
-    today = date.today().strftime("%Y-%m-%d")
-    temp_today = graphs_cache[id_study]['temp']
-    hum_today =  graphs_cache[id_study]['hum']
-    info = json.dumps(studies_info[id_study])
-    layout = layout_cache[id_study]
-    heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
-    heatmap_today = json.dumps(heatmap_cache[id_study])
-    # Pass the data to the study dashboard template
-    study_data = studies_info[id_study]
-    return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last_snapshot, humidity_graphJSON=hum_today, temp_graphJSON=temp_today, heatmap_seq=heatmap_today)
+    
+    study_state = load_cache(id_study, force_load=True)
+    
+    if study_state == EMPTY_LAYOUTS:
+         return redirect(url_for('settings'))
+    elif study_state == EMPTY_MEASUREMENTS:
+        return redirect(url_for('no_data_yet'))
+    elif study_state == OK_STUDY:
+        today = date.today().strftime("%Y-%m-%d")
+        temp_today = graphs_cache[id_study]['temp']
+        hum_today =  graphs_cache[id_study]['hum']
+        info = json.dumps(studies_info[id_study])
+        layout = layout_cache[id_study]
+        heatmap_last_snapshot = generate_last_heatmap_from_cache(id_study)
+        heatmap_today = json.dumps(heatmap_cache[id_study])
+        # Pass the data to the study dashboard template
+        study_data = studies_info[id_study]
+        remove_from_cache(id_study)
+        return render_template('study_dashboard.html', study_dataJSON=info, heat_graphJSON=heatmap_last_snapshot, humidity_graphJSON=hum_today, temp_graphJSON=temp_today, heatmap_seq=heatmap_today)
+    else:
+        return redirect(url_for('error'))
 
 
 @app.route('/logout')
@@ -758,9 +806,6 @@ def get_heatmap_data():
     df = pd.DataFrame(data)
     return jsonify(heatmap_data)
 
-# debug data
-
-
 @app.route("/debug_data_custom")
 def raw_data():
     cur = mysql.connection.cursor()
@@ -789,7 +834,6 @@ def raw_data():
 
     return render_template("show_data.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
 
-
 @app.route("/debug_data")
 def get_data_cached():
     return render_template("show_data.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON)
@@ -806,6 +850,87 @@ def show_all_graphs():
 
     return render_template("show_graphs.html", temp_graphJSON=temp_graphJSON, humidity_graphJSON=humidity_graphJSON, heat_graphJSON=heatmap_data)
 
+@app.route("/signup")
+def signup():
+    return render_template("signup.html")
+
+@app.route('/register_study', methods=['POST'])
+def register_study():
+    owner = request.form.get('name')
+    email = request.form.get('email')
+    start_date = request.form.get('start_date')
+    end_date = request.form.get('end_date')
+    stmt = f'''INSERT INTO studies (start_date, end_date, owner, status, notif_email) values (%s, %s, %s, %s, %s);'''
+    study_data = (datetime.strptime(start_date, date_format).date(), datetime.strptime(end_date, date_format).date(), owner, 'IN PROGRESS', email)
+    print(stmt)
+    cur = mysql.connection.cursor()
+    cur.execute(stmt, study_data)
+    mysql.connection.commit()
+    id_study = cur.lastrowid
+    cur.close()
+    session['id_study'] = str(id_study)
+    return redirect(url_for('settings'))
+
+@app.route('/register_layout', methods=['POST'])
+def register_layout():
+    room_name = request.form.get('room-name')
+    id_study = int(session['id_study'])
+    sensor_1 = request.form.get('sensor-1')
+    sensor_2 = request.form.get('sensor-2')
+    sensor_3 = request.form.get('sensor-3')
+    sensor_4 = request.form.get('sensor-4')
+    sensor_5 = request.form.get('sensor-5')
+    stmt = f'''INSERT INTO layouts (room_name, id_study, sensor_1, sensor_2, sensor_3, sensor_4, sensor_5)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            sensor_1 = VALUES(sensor_1),
+            sensor_2 = VALUES(sensor_2),
+            sensor_3 = VALUES(sensor_3),
+            sensor_4 = VALUES(sensor_4),
+            sensor_5 = VALUES(sensor_5);'''
+    layout_data = (room_name, int(id_study), sensor_1, sensor_2, sensor_3, sensor_4, sensor_5)
+    print(stmt)
+    cur = mysql.connection.cursor()
+    cur.execute(stmt, layout_data)
+    mysql.connection.commit()
+    print(cur.lastrowid)
+    cur.close()
+    remove_from_cache(id_study)
+    load_cache(id_study, force_load=True)
+    return redirect(url_for('settings'))
+
+@app.route("/delete_layout", methods=['POST'])
+def delete_layout():
+    room_name = request.json.get('room_name')
+    id_study = request.json.get('id_study')
+    stmt = f'''DELETE FROM layouts WHERE id_study =  %s AND room_name = %s;'''
+    layout_data = (int(id_study), room_name)
+    cur = mysql.connection.cursor()
+    cur.execute(stmt, layout_data)
+    mysql.connection.commit()
+    print(cur.lastrowid)
+    cur.close()
+    load_cache(id_study, force_load=True)
+    return redirect(url_for('settings'))
+
+@app.route("/settings")
+def settings():
+    if 'id_study' not in session:
+        return redirect(url_for('login'))
+
+    # Get study code from session
+    id_study = session['id_study']
+
+    if id_study not in cache:
+        print("Not in cache ->\n")
+        load_cache(id_study, force_load=True)
+    
+    study_info_json = studies_info[id_study]
+    study_info_json.update({'id':id_study})
+    study_info_json = json.dumps(study_info_json)
+    layouts_json = json.dumps(layout_cache[id_study])
+
+    return render_template("settings.html", study_info = study_info_json, layouts = layouts_json)
 
 @app.route("/temperature")
 def get_temp_by():

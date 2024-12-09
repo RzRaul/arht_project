@@ -23,6 +23,13 @@ h1 {
     color: #0066cc;
 }
 
+input[type="date"] {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid var(--border-light);
+    max-width: 200px;
+  }
+
 .login-container {
     display: flex;
     justify-content: center;
@@ -38,7 +45,7 @@ h1 {
     padding: 40px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 300px;
+    width: 550px;
     text-align: center;
     position: relative;
 }
@@ -46,7 +53,7 @@ h1 {
 form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 5px;
     margin-bottom: 20px;
 }
 
@@ -54,13 +61,29 @@ label {
     font-size: 1rem;
     text-align: left;
     margin-bottom: 5px;
+    margin-top: 25px;
 }
 
-input[type="text"] {
+button {
     padding: 10px;
     font-size: 1rem;
     border: 1px solid #ddd;
     border-radius: 5px;
+    margin-top: 30px;
+}
+
+input[type="text"], input[type="email"]  {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+input[type="number"] {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    max-width: 80px;
 }
 
 button {
@@ -76,6 +99,32 @@ button {
 
 button:hover {
     background-color: #0055a5;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(21, 20px);
+    grid-template-rows: repeat(21, 20px);
+    gap: 2px;
+}
+
+.grid-cell {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.grid-cell.selected {
+    background-color: #007BFF;
+}
+
+.device-grid {
+    margin-bottom: 20px;
+}
+
+.device-grid h3 {
+    margin: 0 0 10px;
 }
 
 .error-message {

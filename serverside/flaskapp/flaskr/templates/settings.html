@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Settings</title>
+    <link rel="stylesheet" href="../static/settings.css">
+</head>
+
+<body>
+    <div class="container">
+       
+        <nav>
+            <ul>
+                <li><a href="#">Settings</a></li>
+                <li><a href="/study_dashboard">Dashboard</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </nav>
+        
+        <header>
+            <h1>Welcome, <span id="owner-name">John Doe</span></h1>
+        </header>
+        <section class="top-section">
+            <div class="study-container">
+                <p id="owner-email"></p>
+                <p id="study-id"></p>
+                <p id="study-info"></p>
+            </div>
+
+            
+
+            <div class="layouts-section" id="layouts-section">
+                <!-- Layouts will be dynamically inserted here -->
+            </div>
+        </section>
+        <!-- Add Layout Section -->
+        <!-- Add New Layout Section -->
+        <section class="add-layout-section">
+            <h2>Add a new layout</h2>
+            <form id="add-layout-form" action="/register_layout" method="POST">
+                <div class="input-group">
+                    <label for="room-name">(Enter an existing one to override it)</label>
+                    <br>
+                    <input type="text" id="room-name" name="room-name" placeholder="Enter Room Name" required>
+                </div>
+
+                <div class="sensor-input-group">
+                    <h3>Sensor Coordinates:</h3>
+                    <br>
+                    <div class="sensor-input">
+                        <label for="sensor-1">Sensor 1 (x,y):</label>
+                        <input type="text" id="sensor-1" pattern="^\d+,\d+$" name="sensor-1" placeholder="x,y (e.g., 4,4)" required>
+                    </div>
+                    <div class="sensor-input">
+                        <label for="sensor-2">Sensor 2 (x,y):</label>
+                        <input type="text" id="sensor-2" pattern="^\d+,\d+$" name="sensor-2" placeholder="x,y (e.g., 7,7)" required>
+                    </div>
+                    <div class="sensor-input">
+                        <label for="sensor-3">Sensor 3 (x,y):</label>
+                        <input type="text" id="sensor-3" pattern="^\d+,\d+$" name="sensor-3" placeholder="x,y (e.g., 3,5)" required>
+                    </div>
+                    <div class="sensor-input">
+                        <label for="sensor-4">Sensor 4 (x,y):</label>
+                        <input type="text" id="sensor-4" pattern="^\d+,\d+$" name="sensor-4" placeholder="x,y (e.g., 4,5)" required>
+                    </div>
+                    <div class="sensor-input">
+                        <label for="sensor-5">Sensor 5 (x,y):</label>
+                        <input type="text" id="sensor-5" pattern="^\d+,\d+$" name="sensor-5" placeholder="x,y (e.g., 0,4)" required>
+                    </div>
+                </div>
+
+                <button type="submit">Save Layout</button>
+            </form>
+        </section>
+    </div>
+</body>
+
+    <script>
+        // Simulate receiving two JSON objects
+        var study_info = {{study_info | safe}};
+        var layout_info = {{layouts | safe}};
+
+        const layoutsData = layout_info;
+
+        // Display Owner Information
+        document.getElementById('owner-name').textContent = study_info.owner;
+        document.getElementById('owner-email').textContent = `Email: ${study_info.email}`;
+        document.getElementById('study-id').textContent = `Study code: ${study_info.id}`;
+        document.getElementById('study-info').textContent = `From: ${study_info.start_date.split(' ')[0]} to: ${study_info.end_date.split(' ')[0]}`;
+        function delete_layout_post(roomName, idStudy) {
+        // Create the data object for the POST request
+        const data = {
+            room_name: roomName,
+            id_study: idStudy
+        };
+
+        // Send the DELETE request using Fetch API
+        fetch('/delete_layout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Optionally, remove the layout element from the DOM if deletion is successful
+                const layoutDiv = document.querySelector(`[data-room-name="${roomName}"][data-id-study="${idStudy}"]`);
+                if (layoutDiv) {
+                    layoutDiv.remove(); // Remove the layout from the page
+                }
+            } else {
+                // Handle errors if necessary
+                console.error('Error deleting layout:', response.statusText);
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+        });
+        }
+        // Function to render layouts
+        function renderLayouts(layouts) {
+            const layoutsSection = document.getElementById('layouts-section');
+            layoutsSection.innerHTML = '';  // Clear existing layouts
+
+            // Iterate through each room in the layouts object
+            for (const roomName in layouts) {
+                const layoutDiv = document.createElement('div');
+                layoutDiv.classList.add('room-layout');
+                layoutDiv.innerHTML = `<h3>${roomName}  <a href="#" onclick="delete_layout_post('${roomName}', ${study_info.id})">x</a></h3>`;  // Set the room name as the title
+
+                // Get the sensor positions from the array for this room
+                const sensors = layouts[roomName];
+
+                sensors.forEach(sensorPosition => {
+                    const [x, y] = sensorPosition.split(',').map(Number);  // Split and convert to numbers
+
+                    // Create the sensor marker element
+                    const sensorMarker = document.createElement('div');
+                    sensorMarker.classList.add('sensor-marker', 'existing-sensor');
+
+                    // Calculate the position as a percentage of the grid
+                    const xPercentage = x * 100 / 21;
+                    const yPercentage = y * 100 / 21;
+                    sensorMarker.style.left = `${xPercentage}%`;
+                    sensorMarker.style.top = `${yPercentage}%`;
+
+                    // Append the sensor marker to the layout div
+                    layoutDiv.appendChild(sensorMarker);
+                });
+
+                // Append the layout div to the section
+                layoutsSection.appendChild(layoutDiv);
+            }
+        }
+
+
+        // Initial render of layouts
+        renderLayouts(layoutsData);
+
+    </script>
+
+
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="static/signup.css">
+    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+    <title>Signup</title>
+</head>
+<body>
+    <div class="login-container">
+        <div class="form-wrapper">
+            <h1>Welcome to ARHT study Tool</h1>
+            <form action="/register_study" method="POST">
+                <label for="reg_owner">How should we call you?</label>
+                <input type="text" id="reg_owner" name="name" required>
+                <label for="reg_email">Your Email</label>
+                <input type="email" id="reg_email" name="email" required>
+                <label for="reg_start_date">Study's Starting date</label>
+                <input type="date" id="reg_start_date" name="start_date" required>
+                <label for="reg_end_date">Study's Ending date</label>
+                <input type="date" id="reg_end_date" name="end_date" required>
+
+                <button type="submit" >Register</button>
+            </form>
+            
+            {% if error %}
+                <p class="error-message">{{ error }}</p>
+            {% endif %}
+        </div>
+        <div class="background-art">
+          <div class="temperature-rings"></div>
+      </div>
+    </div>
+
+    <!-- Background with Data & Graph Illustration -->
+    
+</body>
+</html>

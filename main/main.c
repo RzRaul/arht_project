@@ -12,7 +12,6 @@ https://github.com/RzRaul/arht_project
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "web_server.h"
-#define TIMER_WAKEUP_TIME_US (20 * 1000 * 1000)
 #define GPIO_ERASE_CREDENTIALS GPIO_NUM_18
 
 const char *TAG = "main";
