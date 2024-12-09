@@ -47,13 +47,14 @@
 
 // #define SERVER_IP "82.180.173.228" //IoT server
 // #define SERVER_IP "201.142.138.246" //Home server
-#define SERVER_IP "192.168.1.200" // Local server
+// #define SERVER_IP "192.168.1.200" // Local server
+#define SERVER_IP "192.168.163.37" // Local server
 #define SECONDS_TO_TICKS(x) (x * 1000 / portTICK_PERIOD_MS)
 
 #define SENSORS_PER_DEVICE 5
 #define PARAMETERS_PER_SENSOR 2
 // #define MEASURES_SAMPLING_TIME SECONDS_TO_TICKS(1200)
-#define MEASURES_SAMPLING_TIME SECONDS_TO_TICKS(5)
+#define MEASURES_SAMPLING_TIME SECONDS_TO_TICKS(10)
 
 // float measures[SENSORS_PER_DEVICE * 2];
 

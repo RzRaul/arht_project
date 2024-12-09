@@ -465,7 +465,7 @@ def generate_heat_graph_range(id_study, start_datetime, end_datetime):
 def generate_last_heatmap_from_cache(id_study, json_format=True):
     if id_study not in studies_info:
         return None
-    print(f"layout->{layout_cache[id_study]} heatmap->{heatmap_cache[id_study]}")
+    
     known_points = np.array(get_points_from_layouts(layout_cache[id_study]))
     temperatures = heatmap_cache[id_study]
     temperatures = temperatures[-1]
@@ -636,7 +636,6 @@ def generate_heatmap_sequence(id_study):
 
 def load_cache(id_study, force_load=False):
     study_state = get_study_info(id_study, forced=force_load)
-    print(f"id_study->{id_study} study_state->{study_state}\n")
 
     if study_state == OK_STUDY and id_study in studies_info:
         if id_study not in graphs_cache or force_load:
@@ -767,7 +766,6 @@ def get_temp_graph():
     from_date = request.args.get("from")
     till_date = request.args.get("till")
     id_study = request.args.get("id_study")
-    print(f" from->{from_date} till->{till_date} study->{id_study}")
     # This should fetch temperature data from your database
 
     cur = mysql.connection.cursor()
@@ -938,7 +936,6 @@ def get_temp_by():
     from_date = request.args.get("from")
     till_date = request.args.get("till")
     id_study = request.args.get("id_study")
-    print(f"get->{get_by}  from->{from_date} till->{till_date}")
     cur = mysql.connection.cursor()
     cur.execute(
         f'''select room_name from measurements where id_study={int(id_study)};''')
