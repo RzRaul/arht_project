@@ -5,8 +5,6 @@ This is a project that uses ESP32 and DHT sensors to implement a solution for ma
 
 In this repo the code is for the ESP32 clients that will be making the logging to the database. The Code for the server and the website will be in other repos.
 
-> Note: Add repos when created
-
 # General model 📡
 
 For the general view, the multiple DHT sensors will be hooked up to multiple ESP32, and they will send via API calls the requests to write into the database. And a website will use the database to show visualizations, analysis, and more
@@ -39,6 +37,8 @@ ESP32 will be powered from the USB port, which will provide around 4.7 volts in 
 This pin will be used as VCC for the DHT22 sensors, which work in the range of 3.3V - 5V.
 Besides that, data lines for the sensors require a pull-up resistor of around 10K ohms, so internal 10K pull-up resistors will be enabled for the selected GPIOs.
 ![image](https://github.com/user-attachments/assets/6f7e28d9-e6cf-4632-b386-168e2b1ed50f)
+![image](https://github.com/user-attachments/assets/a5db4c0b-d33a-4714-80fc-c1be0d16b064)
+
 
 ### Cable connection 🔌
 The connection is made with RJ11 (4 wires) and its respective connector
@@ -58,9 +58,15 @@ Everything is running in the [Orange Pi Zero 2 W](http://www.orangepi.org/html/h
 This codebase will be using Espressif IDF (IoT Development Framework) to achieve its porpuse. And will be programmed in C. 
 > Site: https://idf.espressif.com
 
-# Progress
+# Settings Draft
+![image](https://github.com/user-attachments/assets/378bb6a0-5af1-4aa4-b444-3fd4c3e25946)
 
-![image](https://github.com/user-attachments/assets/149fd469-4099-4532-9e72-374b8af31535)
+# Register draft
+![image](https://github.com/user-attachments/assets/3a88fe5a-e467-4bc9-963d-0e4e466f589b)
+
+# Dashboard draft
+![image](https://github.com/user-attachments/assets/1e5de233-e441-4404-89c8-87771ab6d1b3)
+
 
 What it will look like </br>
 ![image](https://github.com/user-attachments/assets/3c80a949-79f1-4bb9-9145-5525c41f1597)
